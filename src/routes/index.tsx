@@ -1,26 +1,160 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Truck, ShieldCheck, Headphones, Store } from "lucide-react";
+import { Layout } from "@/components/Layout";
+import { ProductCard } from "@/components/ProductCard";
+import { fetchProductos, fetchCategorias } from "@/lib/products";
+import heroImg from "@/assets/hero.jpg";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  const featured = useQuery({
+    queryKey: ["featured"],
+    queryFn: () => fetchProductos({ limit: 8 }),
+  });
+  const cats = useQuery({ queryKey: ["cats"], queryFn: fetchCategorias });
+
+  return (
+    <Layout>
+      {/* HERO */}
+      <section className="relative bg-secondary text-secondary-foreground overflow-hidden">
+        <img
+          src={heroImg}
+          alt="Herramientas profesionales en taller industrial"
+          width={1920}
+          height={1280}
+          className="absolute inset-0 size-full object-cover opacity-35"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent" />
+        <div className="container-x relative py-20 md:py-32 max-w-3xl">
+          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-primary font-medium mb-6">
+            <span className="size-1.5 bg-primary" /> Desde 1974 · La Falda, Córdoba
+          </div>
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl leading-[0.95]">
+            50 años acompañando <span className="text-primary">tus proyectos.</span>
+          </h1>
+          <p className="mt-6 text-base md:text-lg text-secondary-foreground/80 max-w-xl">
+            Herramientas, maquinaria y asesoramiento profesional para todo el país.
+            Comprá online con envío a domicilio o retirá en nuestro local.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              to="/productos"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-display tracking-wide px-6 py-3 hover:bg-primary/90 transition"
+            >
+              Ver catálogo <ArrowRight className="size-4" />
+            </Link>
+            <Link
+              to="/productos"
+              search={{ cat: "H. Eléctricas" } as never}
+              className="inline-flex items-center gap-2 border border-white/20 px-6 py-3 font-display tracking-wide hover:border-primary hover:text-primary transition"
+            >
+              Herramientas eléctricas
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* trust strip */}
+      <section className="border-b border-border bg-surface">
+        <div className="container-x grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
+          {[
+            { icon: Truck, t: "Envíos a todo el país", s: "Logística nacional" },
+            { icon: Store, t: "Retiro en local", s: "La Falda, Córdoba" },
+            { icon: ShieldCheck, t: "Pago seguro", s: "Mercado Pago" },
+            { icon: Headphones, t: "Asesoramiento", s: "WhatsApp directo" },
+          ].map(({ icon: Icon, t, s }) => (
+            <div key={t} className="bg-surface p-5 flex items-center gap-3">
+              <Icon className="size-6 text-primary shrink-0" strokeWidth={1.5} />
+              <div>
+                <div className="font-display text-sm">{t}</div>
+                <div className="text-xs text-muted-foreground">{s}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* categories */}
+      <section className="container-x py-16">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Categorías</div>
+            <h2 className="font-display text-3xl md:text-4xl">Explorá por rubro</h2>
+          </div>
+          <Link to="/productos" className="text-sm font-medium hover:text-primary hidden sm:block">
+            Ver todo →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {(cats.data ?? []).map((c) => (
+            <Link
+              key={c}
+              to="/productos"
+              search={{ cat: c } as never}
+              className="group relative bg-secondary text-secondary-foreground p-6 h-32 flex items-end overflow-hidden border-l-2 border-primary hover:bg-primary hover:text-primary-foreground transition"
+            >
+              <div className="font-display text-lg leading-tight relative z-10">{c}</div>
+              <div className="absolute top-3 right-3 text-[10px] uppercase tracking-wider opacity-50 group-hover:opacity-100">
+                Ver →
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* featured */}
+      <section className="container-x pb-20">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Destacados</div>
+            <h2 className="font-display text-3xl md:text-4xl">Más vendidos</h2>
+          </div>
+          <Link to="/productos" className="text-sm font-medium hover:text-primary hidden sm:block">
+            Ver catálogo →
+          </Link>
+        </div>
+        {featured.isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-[3/4] bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {(featured.data?.items ?? []).map((p) => (
+              <ProductCard key={p.id} p={p} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* CTA */}
+      <section className="bg-secondary text-secondary-foreground">
+        <div className="container-x py-16 grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <h3 className="font-display text-3xl md:text-4xl">
+              ¿Necesitás <span className="text-primary">asesoramiento</span> técnico?
+            </h3>
+            <p className="mt-3 text-secondary-foreground/80 max-w-md">
+              Hablá con nuestro equipo. 50 años de experiencia eligiendo la herramienta correcta para cada trabajo.
+            </p>
+          </div>
+          <div className="md:justify-self-end">
+            <a
+              href="https://wa.me/5493548000000"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 font-display tracking-wide hover:bg-primary/90"
+            >
+              Consultar por WhatsApp <ArrowRight className="size-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+    </Layout>
+  );
 }
