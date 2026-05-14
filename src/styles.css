@@ -43,8 +43,8 @@
   --radius: 0.375rem;
 
   /* Industrial palette: deep graphite + signal orange */
-  --background: oklch(0.985 0.002 60);
-  --foreground: oklch(0.18 0.012 250);
+  --background: oklch(0% 0 0);
+  --foreground: oklch(97.015% 0.00011 271.152);
 
   --surface: oklch(0.97 0.003 60);
   --surface-elevated: oklch(1 0 0);

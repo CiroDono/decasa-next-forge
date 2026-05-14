@@ -85,7 +85,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div>
             <div className="font-display text-xl">DECASAN</div>
             <p className="text-sm text-secondary-foreground/70 mt-2 max-w-xs">
-              +50 años acompañando tus proyectos con herramientas, maquinaria y asesoramiento
+              +60 años acompañando tus proyectos con herramientas, maquinaria y asesoramiento
               profesional para todo el país.
             </p>
           </div>
