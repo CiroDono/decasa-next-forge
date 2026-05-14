@@ -34,7 +34,7 @@ function Index() {
             <span className="size-1.5 bg-primary" /> Desde 1974 · La Falda, Córdoba
           </div>
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl leading-[0.95]">
-            50 años acompañando <span className="text-primary">tus proyectos.</span>
+            +50 años acompañando <span className="text-primary">tus proyectos.</span>
           </h1>
           <p className="mt-6 text-base md:text-lg text-secondary-foreground/80 max-w-xl">
             Herramientas, maquinaria y asesoramiento profesional para todo el país.
