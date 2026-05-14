@@ -94,7 +94,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div>
             <h4 className="font-display text-sm mb-3 text-primary">Contacto</h4>
             <a href={WA_URL} target="_blank" rel="noreferrer" className="text-sm hover:text-primary">
-              WhatsApp asesoramiento
+              3548403666
             </a>
           </div>
         </div>
