@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
-import { adminListProductos, adminUpsertProducto, adminDeleteProducto } from "@/lib/admin.functions";
+import { adminListProductos, adminUpsertProducto, adminDeleteProducto, adminListCategorias } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/productos")({ component: AdminProductos });
@@ -20,6 +20,7 @@ function AdminProductos() {
   const list = useServerFn(adminListProductos);
   const upsert = useServerFn(adminUpsertProducto);
   const del = useServerFn(adminDeleteProducto);
+  const listCategorias = useServerFn(adminListCategorias);
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -28,6 +29,11 @@ function AdminProductos() {
   const { data } = useQuery({
     queryKey: ["admin-productos", q, page],
     queryFn: () => list({ data: { q: q || null, page } }),
+  });
+
+  const { data: categorias } = useQuery({
+    queryKey: ["admin-categorias"],
+    queryFn: () => listCategorias(),
   });
 
   async function save(v: ProductoForm) {
@@ -105,12 +111,12 @@ function AdminProductos() {
         </div>
       )}
 
-      {editing && <ProductoModal value={editing} onClose={() => setEditing(null)} onSave={save} />}
+      {editing && <ProductoModal value={editing} categorias={categorias ?? []} onClose={() => setEditing(null)} onSave={save} />}
     </div>
   );
 }
 
-function ProductoModal({ value, onClose, onSave }: { value: ProductoForm; onClose: () => void; onSave: (v: ProductoForm) => Promise<void> }) {
+function ProductoModal({ value, categorias, onClose, onSave }: { value: ProductoForm; categorias: string[]; onClose: () => void; onSave: (v: ProductoForm) => Promise<void> }) {
   const [v, setV] = useState(value);
   const [busy, setBusy] = useState(false);
   return (
@@ -124,8 +130,14 @@ function ProductoModal({ value, onClose, onSave }: { value: ProductoForm; onClos
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Nombre" className="sm:col-span-2" value={v.nombre} onChange={(x) => setV({ ...v, nombre: x })} required />
           <Field label="SKU" value={v.sku} onChange={(x) => setV({ ...v, sku: x })} />
-          <Field label="Categoría" value={v.categoria} onChange={(x) => setV({ ...v, categoria: x })} />
-          <Field label="Grupo (variantes)" value={v.grupo} onChange={(x) => setV({ ...v, grupo: x })} />
+          <label className="block">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Categoría</span>
+            <select value={v.categoria} onChange={(e) => setV({ ...v, categoria: e.target.value })} className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+              <option value="">Seleccionar categoría</option>
+              {categorias.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </label>
+          <Field label="Grupo" value={v.grupo} onChange={(x) => setV({ ...v, grupo: x })} />
           <Field label="Precio (ARS)" type="number" value={String(v.precio)} onChange={(x) => setV({ ...v, precio: Number(x) })} required />
           <Field label="Stock" type="number" value={String(v.stock)} onChange={(x) => setV({ ...v, stock: Number(x) })} required />
           <label className="block sm:col-span-2">

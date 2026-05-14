@@ -93,6 +93,20 @@ export const adminDeleteProducto = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminListCategorias = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("productos")
+      .select("categoria")
+      .not("categoria", "is", null)
+      .order("categoria");
+    if (error) throw new Error(error.message);
+    const categorias = [...new Set(data?.map(p => p.categoria).filter(Boolean))].sort();
+    return categorias;
+  });
+
 export const adminListUsuarios = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
