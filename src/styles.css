@@ -55,7 +55,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.012 250);
 
-  --primary: oklch(96.479% 0.21188 110.946);          /* signal orange */
+  --primary: oklch(93.592% 0.20507 110.986);          /* signal orange */
   --primary-foreground: oklch(0.99 0.005 60);
 
   --secondary: oklch(0.22 0.012 250);      /* graphite */
