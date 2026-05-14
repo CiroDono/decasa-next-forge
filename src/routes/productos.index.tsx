@@ -8,7 +8,7 @@ import { fetchProductos, fetchCategorias } from "@/lib/products";
 
 type Search = { q?: string; cat?: string; page?: number };
 
-export const Route = createFileRoute("/productos")({
+export const Route = createFileRoute("/productos/")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     q: typeof s.q === "string" ? s.q : undefined,
     cat: typeof s.cat === "string" ? s.cat : undefined,
