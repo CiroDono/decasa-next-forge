@@ -1,19 +1,21 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingCart, Search, MessageCircle, MapPin, User } from "lucide-react";
+import { ShoppingCart, Search, MessageCircle, MapPin, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useSession, useIsAdmin, signOut } from "@/lib/auth";
 import type { ReactNode } from "react";
 
-const WHATSAPP = "5493548000000"; // TODO: número real
+const WHATSAPP = "5493548403666";
 const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
   "Hola Decasan, quiero hacer una consulta.",
 )}`;
 
 export function Layout({ children }: { children: ReactNode }) {
   const count = useCart((s) => s.items.reduce((a, b) => a + b.qty, 0));
+  const { user } = useSession();
+  const { data: isAdmin } = useIsAdmin(user);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      {/* top strip */}
       <div className="bg-secondary text-secondary-foreground text-xs">
         <div className="container-x flex items-center justify-between py-2">
           <span className="flex items-center gap-2">
@@ -25,7 +27,6 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* header */}
       <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/90 backdrop-blur">
         <div className="container-x flex items-center gap-4 py-4">
           <Link to="/" className="flex items-center gap-2 shrink-0">
@@ -40,6 +41,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
             <Link to="/productos" className="hover:text-primary">Catálogo</Link>
+            {isAdmin && (
+              <Link to="/admin" className="text-primary hover:text-primary/80 flex items-center gap-1">
+                <Shield className="size-4" /> Admin
+              </Link>
+            )}
           </nav>
 
           <div className="flex-1" />
@@ -47,9 +53,20 @@ export function Layout({ children }: { children: ReactNode }) {
           <Link to="/productos" className="p-2 hover:text-primary" aria-label="Buscar">
             <Search className="size-5" />
           </Link>
-          <Link to="/cuenta" className="p-2 hover:text-primary" aria-label="Mi cuenta">
-            <User className="size-5" />
-          </Link>
+          {user ? (
+            <>
+              <Link to="/cuenta" className="p-2 hover:text-primary" aria-label="Mi cuenta">
+                <User className="size-5" />
+              </Link>
+              <button onClick={signOut} className="p-2 hover:text-primary" aria-label="Cerrar sesión">
+                <LogOut className="size-5" />
+              </button>
+            </>
+          ) : (
+            <Link to="/login" className="p-2 hover:text-primary text-sm font-medium">
+              Ingresar
+            </Link>
+          )}
           <Link to="/carrito" className="relative p-2 hover:text-primary" aria-label="Carrito">
             <ShoppingCart className="size-5" />
             {count > 0 && (
@@ -102,7 +119,6 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-      {/* floating WhatsApp */}
       <a
         href={WA_URL}
         target="_blank"
