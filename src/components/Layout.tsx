@@ -40,9 +40,6 @@ export function Layout({ children }: { children: ReactNode }) {
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
             <Link to="/productos" className="hover:text-primary">Catálogo</Link>
-            <Link to="/productos" search={{ cat: "H. Eléctricas" } as never} className="hover:text-primary">Eléctricas</Link>
-            <Link to="/productos" search={{ cat: "Materiales" } as never} className="hover:text-primary">Materiales</Link>
-            <Link to="/productos" search={{ cat: "Jardín" } as never} className="hover:text-primary">Jardín</Link>
           </nav>
 
           <div className="flex-1" />
