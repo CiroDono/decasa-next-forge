@@ -44,7 +44,7 @@ function Index() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/productos"
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-display tracking-wide px-6 py-3 hover:bg-primary/90 transition"
+              className="inline-flex items-center gap-2 bg-primary text-foreground font-display tracking-wide px-6 py-3 hover:bg-primary/90 transition"
             >
               Ver catálogo <ArrowRight className="size-4" />
             </Link>

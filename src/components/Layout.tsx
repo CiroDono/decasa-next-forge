@@ -27,14 +27,8 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/90 backdrop-blur">
         <div className="container-x flex items-center gap-4 py-4">
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="size-9 bg-primary grid place-items-center font-display text-primary-foreground text-lg">
-              D
-            </div>
-            <div className="leading-none">
-              <div className="font-display text-lg tracking-wide">DECASAN</div>
-              <div className="text-[10px] text-muted-foreground tracking-[0.2em]">HERRAMIENTAS</div>
-            </div>
+          <Link to="/" className="shrink-0" >
+            <img src="/logo.png" alt="Decasan" className="h-10 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
