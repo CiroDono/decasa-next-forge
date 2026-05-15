@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ShoppingCart, Search, MessageCircle, MapPin, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useSession, useIsAdmin, signOut } from "@/lib/auth";
+import { Chatbot } from "@/components/Chatbot";
 import type { ReactNode } from "react";
 
 const WHATSAPP = "5493548403666";
@@ -124,10 +125,12 @@ export function Layout({ children }: { children: ReactNode }) {
         target="_blank"
         rel="noreferrer"
         aria-label="Consultar por WhatsApp"
-        className="fixed bottom-5 right-5 z-50 bg-success text-success-foreground rounded-full p-3.5 shadow-lg hover:scale-105 transition"
+        className="fixed bottom-24 right-5 z-40 bg-success text-success-foreground rounded-full p-3 shadow-lg hover:scale-105 transition"
       >
-        <MessageCircle className="size-6" />
+        <MessageCircle className="size-5" />
       </a>
+
+      <Chatbot />
     </div>
   );
 }
