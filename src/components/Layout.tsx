@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingCart, Search, MapPin, User, LogOut, Shield } from "lucide-react";
+import { ShoppingCart, MapPin, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useSession, useIsAdmin, signOut } from "@/lib/auth";
 import { Chatbot } from "@/components/Chatbot";
+import { HeaderSearch } from "@/components/HeaderSearch";
 import type { ReactNode } from "react";
 
 const WHATSAPP = "5493548403666";
@@ -40,11 +41,10 @@ export function Layout({ children }: { children: ReactNode }) {
             )}
           </nav>
 
-          <div className="flex-1" />
+          <div className="flex-1 flex justify-center px-2">
+            <HeaderSearch />
+          </div>
 
-          <Link to="/productos" className="p-2 hover:text-primary" aria-label="Buscar">
-            <Search className="size-5" />
-          </Link>
           {user ? (
             <>
               <Link to="/cuenta" className="p-2 hover:text-primary" aria-label="Mi cuenta">

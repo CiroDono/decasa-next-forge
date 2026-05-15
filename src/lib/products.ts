@@ -9,23 +9,50 @@ export type Producto = {
   sku: string | null;
   precio: number | null;
   stock: number | null;
+  image_url?: string | null;
+  image_webp?: string | null;
 };
+
+export type SortKey = "relevance" | "price-asc" | "price-desc" | "name-asc";
 
 export async function fetchProductos(opts: {
   q?: string;
   cat?: string;
   grupo?: string;
+  min?: number;
+  max?: number;
+  sort?: SortKey;
   limit?: number;
   offset?: number;
 }): Promise<{ items: Producto[]; count: number }> {
-  let query = supabase
-    .from("productos")
-    .select("*", { count: "exact" })
-    .order("id", { ascending: true });
+  let query = supabase.from("productos").select("*", { count: "exact" });
 
   if (opts.cat) query = query.eq("categoria", opts.cat);
   if (opts.grupo) query = query.eq("grupo", opts.grupo);
-  if (opts.q) query = query.ilike("nombre", `%${opts.q}%`);
+  if (typeof opts.min === "number") query = query.gte("precio", opts.min);
+  if (typeof opts.max === "number") query = query.lte("precio", opts.max);
+  if (opts.q) {
+    const safe = opts.q.replace(/[%,()]/g, " ").trim();
+    if (safe) {
+      query = query.or(
+        `nombre.ilike.%${safe}%,categoria.ilike.%${safe}%,grupo.ilike.%${safe}%,descripcion.ilike.%${safe}%,sku.ilike.%${safe}%`,
+      );
+    }
+  }
+
+  switch (opts.sort) {
+    case "price-asc":
+      query = query.order("precio", { ascending: true, nullsFirst: false });
+      break;
+    case "price-desc":
+      query = query.order("precio", { ascending: false, nullsFirst: false });
+      break;
+    case "name-asc":
+      query = query.order("nombre", { ascending: true });
+      break;
+    default:
+      query = query.order("id", { ascending: true });
+  }
 
   const limit = opts.limit ?? 24;
   const offset = opts.offset ?? 0;
@@ -37,11 +64,7 @@ export async function fetchProductos(opts: {
 }
 
 export async function fetchProducto(id: number): Promise<Producto | null> {
-  const { data, error } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("productos").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data as Producto | null;
 }
@@ -54,4 +77,25 @@ export async function fetchCategorias(): Promise<string[]> {
     if (r.categoria) set.add(r.categoria);
   });
   return Array.from(set).sort();
+}
+
+export async function fetchGrupos(): Promise<string[]> {
+  const { data, error } = await supabase.from("productos").select("grupo");
+  if (error) throw error;
+  const set = new Set<string>();
+  (data ?? []).forEach((r: { grupo: string | null }) => {
+    if (r.grupo) set.add(r.grupo);
+  });
+  return Array.from(set).sort();
+}
+
+export async function fetchPriceRange(): Promise<{ min: number; max: number }> {
+  const [{ data: lo }, { data: hi }] = await Promise.all([
+    supabase.from("productos").select("precio").order("precio", { ascending: true, nullsFirst: false }).limit(1).maybeSingle(),
+    supabase.from("productos").select("precio").order("precio", { ascending: false, nullsFirst: false }).limit(1).maybeSingle(),
+  ]);
+  return {
+    min: Math.floor(Number(lo?.precio ?? 0)),
+    max: Math.ceil(Number(hi?.precio ?? 0)),
+  };
 }

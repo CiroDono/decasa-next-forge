@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductImage } from "@/components/ProductImage";
 import { fetchProducto, fetchProductos, type Producto } from "@/lib/products";
 import { formatARS } from "@/lib/format";
 import { useCart } from "@/lib/cart";
@@ -160,9 +161,14 @@ function ProductDetail() {
               />
 
               <div className="absolute inset-0 grid place-items-center">
-                <Package
-                  className="size-48 text-foreground/20 group-hover:scale-105 transition-transform duration-700"
-                  strokeWidth={0.8}
+                <ProductImage
+                  webp={p.image_webp}
+                  src={p.image_url}
+                  alt={p.nombre ?? "Producto"}
+                  className="size-full"
+                  iconClassName="size-48 text-foreground/20"
+                  loading="eager"
+                  sizes="(max-width: 1024px) 100vw, 600px"
                 />
               </div>
 
