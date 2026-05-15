@@ -7,7 +7,7 @@ import { chatWithBot } from "@/lib/chat.functions";
 
 const WHATSAPP = "5493548403666";
 const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-  "Hola Decasan, vengo del chat de la web.",
+  "Hola Decasan, tengo una consulta a realizar.",
 )}`;
 
 type Msg = { role: "user" | "assistant"; content: string };

@@ -1,4 +1,4 @@
-const brands = ["Bosch", "DeWalt", "Makita", "Stanley", "Black+Decker", "Sika", "Tramontina", "Truper"];
+const brands = ["Bosch", "DeWalt", "Lusqtoff", "Hamilton", "Bremen", "Total", "Milwaukee", "Dyllu" , "Wembley" , "Truper" ];
 
 export function Brands() {
   return (
