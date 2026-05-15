@@ -171,6 +171,8 @@ export type Database = {
           descripcion: string | null
           grupo: string | null
           id: number
+          image_url: string | null
+          image_webp: string | null
           nombre: string | null
           precio: number | null
           sku: string | null
@@ -181,6 +183,8 @@ export type Database = {
           descripcion?: string | null
           grupo?: string | null
           id?: never
+          image_url?: string | null
+          image_webp?: string | null
           nombre?: string | null
           precio?: number | null
           sku?: string | null
@@ -191,6 +195,8 @@ export type Database = {
           descripcion?: string | null
           grupo?: string | null
           id?: never
+          image_url?: string | null
+          image_webp?: string | null
           nombre?: string | null
           precio?: number | null
           sku?: string | null
