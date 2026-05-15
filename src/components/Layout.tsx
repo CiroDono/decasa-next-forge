@@ -6,7 +6,9 @@ import { Chatbot } from "@/components/Chatbot";
 import type { ReactNode } from "react";
 
 
-
+const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
+  "Hola Decasan, quiero hacer una consulta.",
+)}`;
 
 export function Layout({ children }: { children: ReactNode }) {
   const count = useCart((s) => s.items.reduce((a, b) => a + b.qty, 0));
