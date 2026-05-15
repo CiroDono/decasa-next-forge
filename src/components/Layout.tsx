@@ -29,8 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/90 backdrop-blur">
         <div className="container-x flex items-center gap-4 py-4">
           <Link to="/" className="shrink-0" >
-            <img src="/logo.png" alt="Decasan" className="h-16 w-auto" />
-          </Link>
+              <img src="/logo.png" alt="Decasan" className="h-20 w-auto" />
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
             <Link to="/productos" className="hover:text-primary">Catálogo</Link>
