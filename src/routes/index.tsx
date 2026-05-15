@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Truck, ShieldCheck, Headphones, Store } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
+import { Brands } from "@/components/Brands";
 import { fetchProductos, fetchCategorias } from "@/lib/products";
 import heroImg from "@/assets/hero.jpg";
 
@@ -105,6 +106,9 @@ function Index() {
           ))}
         </div>
       </section>
+
+      {/* brands */}
+      <Brands />
 
       {/* featured */}
       <section className="container-x pb-20">
