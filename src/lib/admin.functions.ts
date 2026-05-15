@@ -65,6 +65,8 @@ const productoSchema = z.object({
   sku: z.string().max(80).optional().nullable(),
   precio: z.number().nonnegative(),
   stock: z.number().int().min(0),
+  image_url: z.string().max(500).optional().nullable(),
+  image_webp: z.string().max(500).optional().nullable(),
 });
 
 export const adminUpsertProducto = createServerFn({ method: "POST" })
