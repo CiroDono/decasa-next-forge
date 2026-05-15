@@ -5,10 +5,7 @@ import { useSession, useIsAdmin, signOut } from "@/lib/auth";
 import { Chatbot } from "@/components/Chatbot";
 import type { ReactNode } from "react";
 
-const WHATSAPP = "5493548403666";
-const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-  "Hola Decasan, quiero hacer una consulta.",
-)}`;
+
 
 export function Layout({ children }: { children: ReactNode }) {
   const count = useCart((s) => s.items.reduce((a, b) => a + b.qty, 0));
@@ -22,9 +19,6 @@ export function Layout({ children }: { children: ReactNode }) {
           <span className="flex items-center gap-2">
             <MapPin className="size-3.5" /> La Falda, Córdoba — Envíos a todo el país
           </span>
-          <a href={WA_URL} target="_blank" rel="noreferrer" className="hidden sm:inline hover:text-primary">
-            Asesoramiento por WhatsApp
-          </a>
         </div>
       </div>
 
