@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingCart, Search, MessageCircle, MapPin, User, LogOut, Shield } from "lucide-react";
+import { ShoppingCart, Search, MapPin, User, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useSession, useIsAdmin, signOut } from "@/lib/auth";
 import { Chatbot } from "@/components/Chatbot";
 import type { ReactNode } from "react";
 
-
+const WHATSAPP = "5493548403666";
 const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
   "Hola Decasan, quiero hacer una consulta.",
 )}`;
@@ -116,16 +116,6 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
-
-      <a
-        href={WA_URL}
-        target="_blank"
-        rel="noreferrer"
-        aria-label="Consultar por WhatsApp"
-        className="fixed bottom-24 right-5 z-40 bg-success text-success-foreground rounded-full p-3 shadow-lg hover:scale-105 transition"
-      >
-        <MessageCircle className="size-5" />
-      </a>
 
       <Chatbot />
     </div>
