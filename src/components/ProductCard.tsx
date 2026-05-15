@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Package } from "lucide-react";
 import { formatARS } from "@/lib/format";
 import type { Producto } from "@/lib/products";
+import { ProductImage } from "@/components/ProductImage";
 
 export function ProductCard({ p }: { p: Producto }) {
   const inStock = (p.stock ?? 0) > 0;
@@ -11,8 +11,14 @@ export function ProductCard({ p }: { p: Producto }) {
       params={{ id: String(p.id) }}
       className="group bg-card border border-border hover:border-primary/60 transition flex flex-col"
     >
-      <div className="aspect-square bg-muted grid place-items-center text-muted-foreground/40 relative overflow-hidden">
-        <Package className="size-16 group-hover:scale-110 transition" strokeWidth={1} />
+      <div className="aspect-square bg-muted relative overflow-hidden">
+        <ProductImage
+          webp={p.image_webp}
+          src={p.image_url}
+          alt={p.nombre ?? "Producto"}
+          className="size-full transition group-hover:scale-105"
+          iconClassName="size-16"
+        />
         <span
           className={`absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
             inStock ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"
