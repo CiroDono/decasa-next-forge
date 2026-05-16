@@ -12,7 +12,7 @@ export function Brands() {
           {brands.map((b) => (
             <div
               key={b}
-              className="aspect-[3/2] bg-surface border border-border rounded-xl flex items-center justify-center text-foreground/70 font-bold text-sm hover:border-accent hover:bg-accent hover:text-accent-foreground hover:shadow-card transition-all"
+              className="aspect-[3/2] bg-surface border border-border rounded-xl flex items-center justify-center text-foreground/70 font-bold text-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-card transition-all"
             >
               {b}
             </div>
