@@ -16,7 +16,7 @@ export function Footer() {
               </div>
             </a>
             <p className="text-sm text-secondary-foreground/70 leading-relaxed mb-4">
-              Ferretería, herramientas y materiales en La Falda. +20 años acompañando proyectos.
+              Ferretería, herramientas y materiales en La Falda. +60 años acompañando proyectos.
             </p>
             <div className="flex gap-2">
               <a href="#" aria-label="Facebook" className="size-9 rounded-lg bg-secondary-foreground/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
@@ -51,8 +51,8 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 text-primary"><Clock className="size-4" /> Horarios</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/80">
-              <li className="flex justify-between"><span>Lun a Vie</span><span className="text-secondary-foreground">08:30—20:30</span></li>
-              <li className="flex justify-between"><span>Sábado</span><span className="text-secondary-foreground">08:30—20:30</span></li>
+              <li className="flex justify-between"><span>Lun a Vie</span><span className="text-secondary-foreground">08:30 — 13:00 · 16:30 — 20:30</span></li>
+              <li className="flex justify-between"><span>Sábado</span><span className="text-secondary-foreground">08:30 — 13:00 · 17:00 — 20:30</span></li>
               <li className="flex justify-between"><span>Domingo</span><span className="text-secondary-foreground/50">Cerrado</span></li>
             </ul>
           </div>
