@@ -43,6 +43,9 @@ export const adminListProductos = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({
     q: z.string().max(100).optional().nullable(),
     page: z.number().int().min(1).max(500).optional(),
+    cat: z.string().max(100).optional().nullable(),
+    grupo: z.string().max(100).optional().nullable(),
+    activo: z.enum(["all", "yes", "no"]).optional(),
   }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
@@ -50,6 +53,10 @@ export const adminListProductos = createServerFn({ method: "GET" })
     const pageSize = 30;
     let q = context.supabase.from("productos").select("*", { count: "exact" }).order("id", { ascending: false });
     if (data.q) q = q.ilike("nombre", `%${data.q}%`);
+    if (data.cat) q = q.eq("categoria", data.cat);
+    if (data.grupo) q = q.eq("grupo", data.grupo);
+    if (data.activo === "yes") q = q.eq("activo", true);
+    if (data.activo === "no") q = q.eq("activo", false);
     q = q.range((page - 1) * pageSize, page * pageSize - 1);
     const { data: rows, count, error } = await q;
     if (error) throw new Error(error.message);
@@ -67,6 +74,9 @@ const productoSchema = z.object({
   stock: z.number().int().min(0),
   image_url: z.string().max(500).optional().nullable(),
   image_webp: z.string().max(500).optional().nullable(),
+  activo: z.boolean().optional(),
+  precio_oferta: z.number().nonnegative().nullable().optional(),
+  oferta_hasta: z.string().nullable().optional(),
 });
 
 export const adminUpsertProducto = createServerFn({ method: "POST" })
@@ -78,11 +88,12 @@ export const adminUpsertProducto = createServerFn({ method: "POST" })
     if (id) {
       const { error } = await context.supabase.from("productos").update(rest).eq("id", id);
       if (error) throw new Error(error.message);
+      return { ok: true, id };
     } else {
-      const { error } = await context.supabase.from("productos").insert(rest);
+      const { data: inserted, error } = await context.supabase.from("productos").insert(rest).select("id").single();
       if (error) throw new Error(error.message);
+      return { ok: true, id: inserted?.id as number };
     }
-    return { ok: true };
   });
 
 export const adminDeleteProducto = createServerFn({ method: "POST" })
@@ -91,6 +102,165 @@ export const adminDeleteProducto = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
     const { error } = await context.supabase.from("productos").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// === BULK ACTIONS ===
+
+const bulkSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("set_categoria"), ids: z.array(z.number().int()).min(1).max(500), categoria: z.string().max(100).nullable() }),
+  z.object({ action: z.literal("set_grupo"), ids: z.array(z.number().int()).min(1).max(500), grupo: z.string().max(100).nullable() }),
+  z.object({ action: z.literal("set_activo"), ids: z.array(z.number().int()).min(1).max(500), activo: z.boolean() }),
+  z.object({ action: z.literal("adjust_precio_pct"), ids: z.array(z.number().int()).min(1).max(500), pct: z.number().min(-90).max(500) }),
+  z.object({ action: z.literal("set_stock"), ids: z.array(z.number().int()).min(1).max(500), stock: z.number().int().min(0).max(1_000_000) }),
+  z.object({
+    action: z.literal("set_oferta"),
+    ids: z.array(z.number().int()).min(1).max(500),
+    precio_oferta: z.number().nonnegative().nullable(),
+    oferta_hasta: z.string().nullable(),
+  }),
+  z.object({ action: z.literal("delete"), ids: z.array(z.number().int()).min(1).max(500) }),
+]);
+
+export const adminBulkProductos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => bulkSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const sb = context.supabase;
+
+    switch (data.action) {
+      case "set_categoria": {
+        const { error } = await sb.from("productos").update({ categoria: data.categoria }).in("id", data.ids);
+        if (error) throw new Error(error.message);
+        return { ok: true, updated: data.ids.length };
+      }
+      case "set_grupo": {
+        const { error } = await sb.from("productos").update({ grupo: data.grupo }).in("id", data.ids);
+        if (error) throw new Error(error.message);
+        return { ok: true, updated: data.ids.length };
+      }
+      case "set_activo": {
+        const { error } = await sb.from("productos").update({ activo: data.activo }).in("id", data.ids);
+        if (error) throw new Error(error.message);
+        return { ok: true, updated: data.ids.length };
+      }
+      case "set_stock": {
+        const { error } = await sb.from("productos").update({ stock: data.stock }).in("id", data.ids);
+        if (error) throw new Error(error.message);
+        return { ok: true, updated: data.ids.length };
+      }
+      case "set_oferta": {
+        if (data.precio_oferta != null && data.precio_oferta < 0) {
+          throw new Error("Precio de oferta inválido");
+        }
+        const { error } = await sb.from("productos").update({
+          precio_oferta: data.precio_oferta,
+          oferta_hasta: data.oferta_hasta,
+        }).in("id", data.ids);
+        if (error) throw new Error(error.message);
+        return { ok: true, updated: data.ids.length };
+      }
+      case "adjust_precio_pct": {
+        // Read current prices, compute new, update one by one.
+        const { data: rows, error: e1 } = await sb.from("productos").select("id, precio").in("id", data.ids);
+        if (e1) throw new Error(e1.message);
+        const factor = 1 + data.pct / 100;
+        let count = 0;
+        for (const r of rows ?? []) {
+          const current = Number(r.precio ?? 0);
+          if (current <= 0) continue;
+          const next = Math.max(0, Math.round(current * factor * 100) / 100);
+          const { error } = await sb.from("productos").update({ precio: next }).eq("id", r.id);
+          if (error) throw new Error(error.message);
+          count++;
+        }
+        return { ok: true, updated: count };
+      }
+      case "delete": {
+        const { error } = await sb.from("productos").delete().in("id", data.ids);
+        if (error) throw new Error(error.message);
+        return { ok: true, updated: data.ids.length };
+      }
+    }
+  });
+
+// === PRODUCT IMAGES (galería) ===
+
+export const adminListProductImages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ producto_id: z.number().int() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { data: rows, error } = await context.supabase
+      .from("product_images")
+      .select("*")
+      .eq("producto_id", data.producto_id)
+      .order("orden", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const adminAddProductImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    producto_id: z.number().int(),
+    url: z.string().max(500).nullable().optional(),
+    url_webp: z.string().max(500).nullable().optional(),
+    alt: z.string().max(255).nullable().optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { data: max } = await context.supabase
+      .from("product_images")
+      .select("orden")
+      .eq("producto_id", data.producto_id)
+      .order("orden", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextOrden = (max?.orden ?? -1) + 1;
+    const { data: inserted, error } = await context.supabase
+      .from("product_images")
+      .insert({
+        producto_id: data.producto_id,
+        url: data.url ?? null,
+        url_webp: data.url_webp ?? null,
+        alt: data.alt ?? null,
+        orden: nextOrden,
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted;
+  });
+
+export const adminReorderProductImages = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    producto_id: z.number().int(),
+    items: z.array(z.object({ id: z.string().uuid(), orden: z.number().int().min(0).max(1000) })).max(100),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    for (const it of data.items) {
+      const { error } = await context.supabase
+        .from("product_images")
+        .update({ orden: it.orden })
+        .eq("id", it.id)
+        .eq("producto_id", data.producto_id);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const adminDeleteProductImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("product_images").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -107,6 +277,19 @@ export const adminListCategorias = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const categorias = [...new Set(data?.map(p => p.categoria).filter(Boolean))].sort();
     return categorias;
+  });
+
+export const adminListGrupos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("productos")
+      .select("grupo")
+      .not("grupo", "is", null)
+      .order("grupo");
+    if (error) throw new Error(error.message);
+    return [...new Set(data?.map(p => p.grupo).filter(Boolean))].sort();
   });
 
 export const adminListUsuarios = createServerFn({ method: "GET" })
