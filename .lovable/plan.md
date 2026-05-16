@@ -1,60 +1,99 @@
-Voy a dividir el trabajo en 3 bloques. Confirmá antes de implementar.
+# Plan: Selección múltiple + Galería multi-imagen + Editor de recorte
 
-## 1) Buscador real en el header
+Tres bloques grandes. Te propongo el orden y el alcance antes de tocar nada, porque varios cambios son irreversibles (migración de DB, storage) y otros tocan archivos críticos del admin.
 
-- Reemplazar el input estático del header por un combobox con búsqueda en vivo.
-- Búsqueda en Supabase por `nombre`, `categoria` y `descripcion` con `or(ilike...)` y debounce de 250 ms.
-- Dropdown con los primeros 8 resultados (imagen placeholder, nombre, categoría, precio). Click → `/productos/$id`.
-- Enter → navega a `/productos?q=...` (página de catálogo, ya soporta `q`).
-- En la página `/productos`: el input lateral pasa a búsqueda en vivo (sin necesidad de submit), también buscando por nombre+categoría+descripción.
+---
 
-Cambia `fetchProductos` en `src/lib/products.ts` para que `q` use:
-`or(\`nombre.ilike.%${q}%,categoria.ilike.%${q}%,descripcion.ilike.%${q}%\`)`.
+## Bloque 1 — Selección múltiple y acciones masivas en Admin
 
-## 2) Imágenes WebP en productos
+### Cambios de DB
+- Agregar `productos.activo boolean default true` (estado activo/inactivo).
+- Agregar `productos.precio_oferta numeric` y `productos.oferta_hasta timestamptz` (descuentos programables).
+- Índice en `activo` para filtros.
 
-**Migración (no destructiva):**
-```sql
-ALTER TABLE public.productos
-  ADD COLUMN IF NOT EXISTS image_url text,
-  ADD COLUMN IF NOT EXISTS image_webp text;
+### Frontend (`_authenticated.admin.productos.tsx`)
+- Columna de checkbox + "seleccionar todos" (de la página actual).
+- `Set<number>` de IDs seleccionados en estado, persistido entre cambios de página/búsqueda/filtros (no se limpia al re-fetch).
+- Barra flotante de acciones masivas (visible cuando `selected.size > 0`) con:
+  - Cambiar categoría / grupo
+  - Activar / desactivar
+  - Ajuste de precio por porcentaje (+/- %)
+  - Set de stock absoluto o delta
+  - Crear oferta (precio_oferta + fecha límite)
+  - Eliminar
+- `AlertDialog` de confirmación con resumen ("Se actualizarán N productos") para acciones destructivas/precio.
+
+### Backend (`src/lib/admin.functions.ts`)
+- `adminBulkUpdateProductos` con discriminated union validada con Zod:
+  - `{ action: "set_categoria", ids, categoria }`
+  - `{ action: "set_grupo", ids, grupo }`
+  - `{ action: "set_activo", ids, activo }`
+  - `{ action: "adjust_precio_pct", ids, pct }` (clamp >= 0)
+  - `{ action: "set_stock", ids, stock }` (>= 0)
+  - `{ action: "set_oferta", ids, precio_oferta, oferta_hasta }`
+  - `{ action: "delete", ids }`
+- Límite máximo: 500 ids por llamada.
+- Para ajuste de precio: hacer `UPDATE ... SET precio = round(precio * (1 + pct/100), 2)` vía RPC (no traer y reinsertar). Si no se puede en una sola query desde supabase-js, hacer batch SELECT + UPDATE por id en transacción lógica.
+
+---
+
+## Bloque 2 — Múltiples imágenes por producto
+
+### Cambios de DB
+Nueva tabla `product_images`:
 ```
-(Si ya existiera otra columna de imagen la usamos como fallback; hoy no hay ninguna, por eso agrego también `image_url`.)
-
-**Storage:** crear bucket público `product-images` con políticas: lectura pública, escritura solo para admins (`has_role(auth.uid(),'admin')`).
-
-**Componente `<ProductImage>`** reutilizable con `<picture>`:
-- `<source type="image/webp" srcset={image_webp}>` si existe
-- `<img src={image_url ?? placeholder} loading="lazy" decoding="async" sizes=...>`
-- Fallback al ícono `Package` actual si no hay nada.
-
-Lo aplico en: `ProductCard`, página `productos/$id`, sliders del home, panel admin.
-
-**Admin productos:**
-- En el modal de edición agregar uploader que acepta `.webp`, `.jpg`, `.png`.
-- Si suben no-webp → se sube tal cual a `image_url`. Si suben `.webp` → a `image_webp`. (No hago conversión server-side: el runtime Worker no soporta `sharp`. La conversión queda a cargo del usuario o de un paso futuro.)
-- Validación: máx 2 MB, tipos permitidos.
-
-## 3) Filtros avanzados en `/productos`
-
-Sin tocar el schema. Agrego en `validateSearch`: `cat`, `grupo`, `min`, `max`, `sort` (`relevance|price-asc|price-desc|name-asc`), `q`, `page`.
-
-- Sidebar: categorías (ya existe), marca = `grupo` (lista derivada de DB), slider/inputs de precio min-max, select de orden.
-- `fetchProductos` recibe `min`, `max`, `sort` y aplica `.gte('precio',min).lte('precio',max)` y `.order(...)`.
-- Combinación libre, actualización al cambiar (URL = estado).
-- Estado vacío con botón "Limpiar filtros" (ya existe parcialmente, lo amplío).
-- Performance: paginación server-side ya está; agrego índice:
-```sql
-CREATE INDEX IF NOT EXISTS productos_precio_idx ON public.productos (precio);
-CREATE INDEX IF NOT EXISTS productos_grupo_idx  ON public.productos (grupo);
+id uuid pk, producto_id bigint fk productos(id) on delete cascade,
+url text, url_webp text, alt text, orden int default 0,
+created_at timestamptz default now()
 ```
+- Índice `(producto_id, orden)`.
+- RLS: lectura pública, escritura solo admin (vía `has_role`).
+- **Migración de datos**: si `productos.image_url` o `image_webp` existen, insertar como `orden = 0` en `product_images` para mantener compatibilidad.
+- Mantener columnas `image_url`/`image_webp` en `productos` por ahora como cache de "imagen principal" (la de orden 0). Un trigger las sincroniza cuando cambia la imagen orden 0.
 
-## Orden de ejecución
+### Backend
+- `fetchProducto(id)` también trae `product_images` ordenadas.
+- `fetchProductos` sigue usando `image_url`/`image_webp` (el cache) para listas → cero impacto en performance del catálogo.
+- `adminProductImages` server fns: `list`, `add` (url, url_webp, orden), `reorder` (array de `{id, orden}`), `delete`, `setPrincipal`.
 
-1. Migración SQL (columnas + índices) y bucket de storage.
-2. `<ProductImage>` + actualizar cards/detalle/sliders.
-3. Buscador del header + búsqueda extendida en `fetchProductos`.
-4. Filtros avanzados en catálogo.
-5. Uploader en admin.
+### Frontend
+- **Detalle de producto** (`productos.$id.tsx`): galería con miniaturas + imagen grande, click en thumbnail cambia la principal, navegación con flechas. Lazy loading nativo + `<picture>` con webp.
+- **ProductCard / búsqueda / destacados**: siguen usando `image_url`/`image_webp` (la principal). Sin cambios visuales.
+- **Admin productos detalle**: nueva sección "Galería" con grilla drag & drop (uso `@dnd-kit/sortable`), botón "Subir imágenes" (multi-file), borrar, marcar como principal.
 
-¿Avanzo con todo en este orden, o querés que arranque solo por una parte (ej. 1 primero)?
+---
+
+## Bloque 3 — Editor de recorte + normalización al subir
+
+### Frontend
+- Librería: `react-easy-crop` (ligera, sin dependencias nativas, funciona en browser).
+- Flujo al subir cualquier imagen (single o batch):
+  1. Usuario selecciona archivo(s).
+  2. Modal con cropper, aspect ratio fijo **1:1** (configurable luego), preview en tiempo real.
+  3. Al confirmar, recorte se renderiza en `<canvas>`, se exporta a **WebP** con `canvas.toBlob(_, 'image/webp', 0.85)`.
+  4. Se redimensiona a un tamaño máximo (ej. 1200x1200) antes de exportar.
+  5. Si el browser no soporta encode WebP (Safari viejo), fallback a JPEG.
+  6. Upload del blob resultante a Supabase Storage `product-images/<producto_id>/<uuid>.webp`.
+- Para imágenes ya cargadas: botón "Editar recorte" en la galería abre el mismo modal cargando la URL existente.
+
+### Consistencia visual
+- `<ProductImage>` ya usa `<picture>`. Agregar `object-cover` + `aspect-square` en contenedores de catálogo/sliders → todas las cards uniformes incluso si alguna imagen vieja no respeta el ratio.
+
+### Sin server-side processing
+- El runtime Worker no soporta `sharp`. Todo el procesamiento (resize, crop, encode WebP) ocurre en el browser antes de subir. Documentado en código.
+
+---
+
+## Orden de ejecución sugerido
+
+1. **Migración DB**: `activo`, `precio_oferta`, `oferta_hasta`, tabla `product_images` + RLS + backfill desde `image_url`.
+2. **Bloque 1** (selección múltiple + bulk actions) — independiente, valor inmediato.
+3. **Bloque 2** (galería) — depende de la migración.
+4. **Bloque 3** (cropper) — se integra encima del uploader del Bloque 2.
+
+## Preguntas antes de avanzar
+
+1. **Aspect ratio del cropper**: ¿1:1 (cuadrado, ideal para ecommerce uniforme), 4:3, o configurable por producto?
+2. **Estado activo/inactivo**: ¿los inactivos no se muestran en el catálogo público o solo se marcan visualmente en admin?
+3. **Ofertas programables**: ¿el precio efectivo lo calcula el frontend (`oferta_hasta > now() ? precio_oferta : precio`) o querés un campo computado?
+4. ¿Arranco con los 3 bloques en orden o preferís que entregue solo el Bloque 1 primero para validar el patrón?
