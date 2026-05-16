@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
-import { ProductImage } from "@/components/ProductImage";
-import { fetchProducto, fetchProductos, type Producto } from "@/lib/products";
+import { ProductGallery } from "@/components/ProductGallery";
+import { fetchProducto, fetchProductoImagenes, fetchProductos, getPrecioEfectivo, tieneOferta, type Producto } from "@/lib/products";
 import { formatARS } from "@/lib/format";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
@@ -47,6 +47,12 @@ function ProductDetail() {
   const product = useQuery({
     queryKey: ["product", productId],
     queryFn: () => fetchProducto(productId),
+  });
+
+  const gallery = useQuery({
+    queryKey: ["product-images-public", productId],
+    queryFn: () => fetchProductoImagenes(productId),
+    enabled: !!product.data,
   });
 
   const related = useQuery({
@@ -96,8 +102,9 @@ function ProductDetail() {
   const specs = descLines.filter((l) => /^[•\-·]/.test(l)).map((l) => l.replace(/^[•\-·]\s*/, ""));
   const intro = descLines.filter((l) => !/^[•\-·]/.test(l)).join("\n");
 
-  const priceNum = (p.precio ?? 0) / 100;
-  const cuota3 = priceNum / 3;
+  const precioEfectivo = getPrecioEfectivo(p);
+  const enOferta = tieneOferta(p);
+  const cuota3 = precioEfectivo / 3;
 
   const addToCart = () => {
     add(
