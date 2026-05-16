@@ -42,7 +42,7 @@ export function LocationSection() {
                 <Phone className="size-5 text-primary shrink-0 mt-0.5" />
                 <div>
                   <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Teléfono</div>
-                  <a href="tel:+543548592127" className="text-lg font-bold text-foreground hover:text-primary transition-colors">
+                  <a className="text-lg font-bold text-foreground hover:text-primary transition-colors">
                     +54 3548 59-2127
                   </a>
                 </div>

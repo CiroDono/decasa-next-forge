@@ -36,7 +36,7 @@ export function Footer() {
             <h4 className="text-sm font-bold uppercase tracking-wider mb-4 text-primary">Contacto</h4>
             <ul className="space-y-3 text-sm text-secondary-foreground/80">
               <li className="flex items-start gap-2"><MapPin className="size-4 text-primary shrink-0 mt-0.5" /><span>Av. Pres. Kennedy 270, La Falda, Córdoba</span></li>
-              <li className="flex items-start gap-2"><Phone className="size-4 text-primary shrink-0 mt-0.5" /><a href="tel:+543548592127" className="hover:text-primary">+54 3548 59-2127</a></li>
+              <li className="flex items-start gap-2"><Phone className="size-4 text-primary shrink-0 mt-0.5" /><a className="hover:text-primary">+54 3548 59-2127</a></li>
               <li className="flex items-start gap-2"><Mail className="size-4 text-primary shrink-0 mt-0.5" /><span>info@decasan.com.ar</span></li>
             </ul>
           </div>
