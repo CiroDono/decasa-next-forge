@@ -1,19 +1,13 @@
-import { MapPin, Phone, Clock, MessageCircle } from "lucide-react";
+import { MapPin, Phone, MessageCircle } from "lucide-react";
 
 const WHATSAPP_URL = "https://wa.me/5493548592127";
-
-const hours = [
-  { day: "Lunes a Viernes", time: "08:30 — 13:00 · 16:30 — 20:30" },
-  { day: "Sábados", time: "08:30 — 13:00 · 17:00 — 20:30" },
-  { day: "Domingos", time: "Cerrado" },
-];
 
 export function LocationSection() {
   return (
     <section id="contacto" className="py-20 lg:py-28 bg-surface">
       <div className="container-x">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="inline-block text-xs font-bold uppercase tracking-widest text-primary mb-3">Visitanos</span>
+          <span className="inline-block text-xs font-bold uppercase tracking-widest text-primary mb-3"><strong>Visitanos</strong></span>
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground mb-4">
             Estamos en el corazón de <span className="text-primary">La Falda</span>
           </h2>
@@ -32,7 +26,7 @@ export function LocationSection() {
           </div>
 
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-secondary rounded-2xl p-6 border border-border">
+            <div className="bg-surface-elevated rounded-2xl p-6 border border-border shadow-card">
               <div className="flex items-start gap-3 mb-1">
                 <MapPin className="size-5 text-primary shrink-0 mt-0.5" />
                 <div>
@@ -43,27 +37,12 @@ export function LocationSection() {
               </div>
             </div>
 
-            <div className="bg-secondary rounded-2xl p-6 border border-border">
-              <div className="flex items-start gap-3 mb-3">
-                <Clock className="size-5 text-primary shrink-0 mt-0.5" />
-                <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Horarios</div>
-              </div>
-              <ul className="space-y-2.5">
-                {hours.map((h) => (
-                  <li key={h.day} className="flex justify-between items-start gap-3 text-sm">
-                    <span className="font-semibold text-foreground">{h.day}</span>
-                    <span className="text-muted-foreground text-right">{h.time}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-primary rounded-2xl p-6 text-primary-foreground">
+            <div className="bg-surface-elevated rounded-2xl p-6 border border-border shadow-card">
               <div className="flex items-start gap-3 mb-4">
-                <Phone className="size-5 shrink-0 mt-0.5" />
+                <Phone className="size-5 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-primary-foreground/60 font-semibold mb-1">Teléfono</div>
-                  <a href="tel:+543548592127" className="text-lg font-bold hover:opacity-80 transition-opacity">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Teléfono</div>
+                  <a href="tel:+543548592127" className="text-lg font-bold text-foreground hover:text-primary transition-colors">
                     +54 3548 59-2127
                   </a>
                 </div>

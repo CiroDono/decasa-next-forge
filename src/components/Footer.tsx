@@ -1,4 +1,4 @@
-import { Wrench, Facebook, Instagram, MapPin, Phone, Mail, Clock } from "lucide-react";
+import { Facebook, Instagram, MapPin, Phone, Mail, Clock } from "lucide-react";
 
 export function Footer() {
   return (
@@ -6,14 +6,8 @@ export function Footer() {
       <div className="container-x">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           <div>
-            <a href="#inicio" className="flex items-center gap-2 mb-4">
-              <div className="size-10 rounded-xl bg-primary flex items-center justify-center">
-                <Wrench className="size-5 text-primary-foreground" strokeWidth={2.5} />
-              </div>
-              <div className="leading-tight">
-                <div className="font-bold text-lg">Decasan</div>
-                <div className="text-[10px] uppercase tracking-widest text-secondary-foreground/50 -mt-0.5">Herramientas</div>
-              </div>
+            <a href="/" className="shrink-0 mb-4 inline-block">
+              <img src="/logo.png" alt="Decasan" className="h-12 w-auto" />
             </a>
             <p className="text-sm text-secondary-foreground/70 leading-relaxed mb-4">
               Ferretería, herramientas y materiales en La Falda. +60 años acompañando proyectos.
