@@ -11,9 +11,37 @@ export type Producto = {
   stock: number | null;
   image_url?: string | null;
   image_webp?: string | null;
+  activo?: boolean;
+  precio_oferta?: number | null;
+  oferta_hasta?: string | null;
+};
+
+export type ProductImageRow = {
+  id: string;
+  producto_id: number;
+  url: string | null;
+  url_webp: string | null;
+  alt: string | null;
+  orden: number;
 };
 
 export type SortKey = "relevance" | "price-asc" | "price-desc" | "name-asc";
+
+export function getPrecioEfectivo(p: Pick<Producto, "precio" | "precio_oferta" | "oferta_hasta">): number {
+  const base = Number(p.precio ?? 0);
+  if (
+    p.precio_oferta != null &&
+    Number(p.precio_oferta) > 0 &&
+    (!p.oferta_hasta || new Date(p.oferta_hasta) > new Date())
+  ) {
+    return Number(p.precio_oferta);
+  }
+  return base;
+}
+
+export function tieneOferta(p: Pick<Producto, "precio" | "precio_oferta" | "oferta_hasta">): boolean {
+  return getPrecioEfectivo(p) < Number(p.precio ?? 0);
+}
 
 export async function fetchProductos(opts: {
   q?: string;
@@ -67,6 +95,17 @@ export async function fetchProducto(id: number): Promise<Producto | null> {
   const { data, error } = await supabase.from("productos").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data as Producto | null;
+}
+
+export async function fetchProductoImagenes(productoId: number): Promise<ProductImageRow[]> {
+  const { data, error } = await (supabase as any)
+    .from("product_images")
+    .select("*")
+    .eq("producto_id", productoId)
+    .order("orden", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ProductImageRow[];
 }
 
 export async function fetchCategorias(): Promise<string[]> {

@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { formatARS } from "@/lib/format";
-import type { Producto } from "@/lib/products";
+import { getPrecioEfectivo, tieneOferta, type Producto } from "@/lib/products";
 import { ProductImage } from "@/components/ProductImage";
 
 export function ProductCard({ p }: { p: Producto }) {
   const inStock = (p.stock ?? 0) > 0;
+  const efectivo = getPrecioEfectivo(p);
+  const enOferta = tieneOferta(p);
   return (
     <Link
       to="/productos/$id"
@@ -26,6 +28,11 @@ export function ProductCard({ p }: { p: Producto }) {
         >
           {inStock ? "En stock" : "Sin stock"}
         </span>
+        {enOferta && (
+          <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-primary text-primary-foreground">
+            Oferta
+          </span>
+        )}
       </div>
       <div className="p-3 flex-1 flex flex-col gap-1">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -35,8 +42,11 @@ export function ProductCard({ p }: { p: Producto }) {
         <div className="font-medium text-sm leading-snug line-clamp-2 group-hover:text-primary">
           {p.nombre}
         </div>
-        <div className="mt-auto pt-2 font-display text-lg text-foreground">
-          {formatARS(p.precio)}
+        <div className="mt-auto pt-2">
+          {enOferta && (
+            <div className="text-[11px] text-muted-foreground line-through leading-none">{formatARS(p.precio)}</div>
+          )}
+          <div className="font-display text-lg text-foreground leading-tight">{formatARS(efectivo)}</div>
         </div>
       </div>
     </Link>

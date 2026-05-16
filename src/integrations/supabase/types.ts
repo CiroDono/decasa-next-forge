@@ -165,8 +165,47 @@ export type Database = {
         }
         Relationships: []
       }
+      product_images: {
+        Row: {
+          alt: string | null
+          created_at: string
+          id: string
+          orden: number
+          producto_id: number
+          url: string | null
+          url_webp: string | null
+        }
+        Insert: {
+          alt?: string | null
+          created_at?: string
+          id?: string
+          orden?: number
+          producto_id: number
+          url?: string | null
+          url_webp?: string | null
+        }
+        Update: {
+          alt?: string | null
+          created_at?: string
+          id?: string
+          orden?: number
+          producto_id?: number
+          url?: string | null
+          url_webp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productos: {
         Row: {
+          activo: boolean
           categoria: string | null
           descripcion: string | null
           grupo: string | null
@@ -174,11 +213,14 @@ export type Database = {
           image_url: string | null
           image_webp: string | null
           nombre: string | null
+          oferta_hasta: string | null
           precio: number | null
+          precio_oferta: number | null
           sku: string | null
           stock: number | null
         }
         Insert: {
+          activo?: boolean
           categoria?: string | null
           descripcion?: string | null
           grupo?: string | null
@@ -186,11 +228,14 @@ export type Database = {
           image_url?: string | null
           image_webp?: string | null
           nombre?: string | null
+          oferta_hasta?: string | null
           precio?: number | null
+          precio_oferta?: number | null
           sku?: string | null
           stock?: number | null
         }
         Update: {
+          activo?: boolean
           categoria?: string | null
           descripcion?: string | null
           grupo?: string | null
@@ -198,7 +243,9 @@ export type Database = {
           image_url?: string | null
           image_webp?: string | null
           nombre?: string | null
+          oferta_hasta?: string | null
           precio?: number | null
+          precio_oferta?: number | null
           sku?: string | null
           stock?: number | null
         }

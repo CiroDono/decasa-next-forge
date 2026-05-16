@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
-import { ProductImage } from "@/components/ProductImage";
-import { fetchProducto, fetchProductos, type Producto } from "@/lib/products";
+import { ProductGallery } from "@/components/ProductGallery";
+import { fetchProducto, fetchProductoImagenes, fetchProductos, getPrecioEfectivo, tieneOferta, type Producto } from "@/lib/products";
 import { formatARS } from "@/lib/format";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
@@ -47,6 +47,12 @@ function ProductDetail() {
   const product = useQuery({
     queryKey: ["product", productId],
     queryFn: () => fetchProducto(productId),
+  });
+
+  const gallery = useQuery({
+    queryKey: ["product-images-public", productId],
+    queryFn: () => fetchProductoImagenes(productId),
+    enabled: !!product.data,
   });
 
   const related = useQuery({
@@ -96,12 +102,13 @@ function ProductDetail() {
   const specs = descLines.filter((l) => /^[•\-·]/.test(l)).map((l) => l.replace(/^[•\-·]\s*/, ""));
   const intro = descLines.filter((l) => !/^[•\-·]/.test(l)).join("\n");
 
-  const priceNum = (p.precio ?? 0) / 100;
-  const cuota3 = priceNum / 3;
+  const precioEfectivo = getPrecioEfectivo(p);
+  const enOferta = tieneOferta(p);
+  const cuota3 = precioEfectivo / 3;
 
   const addToCart = () => {
     add(
-      { id: p.id, nombre: p.nombre ?? "", precio: p.precio ?? 0, sku: p.sku },
+      { id: p.id, nombre: p.nombre ?? "", precio: precioEfectivo, sku: p.sku },
       qty,
     );
     toast.success(`${qty} × agregado al carrito`, { description: p.nombre ?? "" });
@@ -142,70 +149,33 @@ function ProductDetail() {
 
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)] gap-8 lg:gap-14">
           {/* Gallery */}
-          <div className="space-y-3">
-            <div className="relative aspect-square bg-gradient-to-br from-muted via-surface to-muted border border-border overflow-hidden group">
-              {/* corner ticks */}
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary" />
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary" />
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary" />
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary" />
-
-              {/* grid texture */}
-              <div
-                className="absolute inset-0 opacity-[0.06]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)",
-                  backgroundSize: "32px 32px",
-                }}
-              />
-
-              <div className="absolute inset-0 grid place-items-center">
-                <ProductImage
-                  webp={p.image_webp}
-                  src={p.image_url}
-                  alt={p.nombre ?? "Producto"}
-                  className="size-full"
-                  iconClassName="size-48 text-foreground/20"
-                  loading="eager"
-                  sizes="(max-width: 1024px) 100vw, 600px"
-                />
-              </div>
-
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {inStock ? (
-                  <span className="bg-success text-success-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 inline-flex items-center gap-1.5">
-                    <Check className="size-3" /> Disponible
-                  </span>
-                ) : (
-                  <span className="bg-secondary text-secondary-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1">
-                    Sin stock
-                  </span>
-                )}
-                {lowStock && (
-                  <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1">
-                    Últimas {p.stock} unidades
-                  </span>
-                )}
-              </div>
-
-              <div className="absolute bottom-4 right-4 text-[10px] uppercase tracking-[0.25em] text-muted-foreground bg-surface-elevated/80 backdrop-blur px-2 py-1">
-                SKU {p.sku ?? p.id}
-              </div>
-            </div>
-
-            {/* thumbnail row (decorative) */}
-            <div className="grid grid-cols-4 gap-3">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`aspect-square border bg-muted/50 grid place-items-center ${
-                    i === 0 ? "border-primary" : "border-border"
-                  }`}
-                >
-                  <Package className="size-8 text-muted-foreground/40" strokeWidth={1} />
-                </div>
-              ))}
+          <div className="space-y-3 relative">
+            <ProductGallery
+              imagenes={gallery.data ?? []}
+              fallbackWebp={p.image_webp}
+              fallbackSrc={p.image_url}
+              alt={p.nombre ?? "Producto"}
+            />
+            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
+              {enOferta && (
+                <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1">
+                  Oferta
+                </span>
+              )}
+              {inStock ? (
+                <span className="bg-success text-success-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 inline-flex items-center gap-1.5">
+                  <Check className="size-3" /> Disponible
+                </span>
+              ) : (
+                <span className="bg-secondary text-secondary-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1">
+                  Sin stock
+                </span>
+              )}
+              {lowStock && (
+                <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1">
+                  Últimas {p.stock} unidades
+                </span>
+              )}
             </div>
           </div>
 
@@ -225,8 +195,11 @@ function ProductDetail() {
 
             {/* Price block */}
             <div className="mt-6 border-t border-b border-border py-6">
+              {enOferta && (
+                <div className="text-base text-muted-foreground line-through leading-none mb-1">{formatARS(p.precio)}</div>
+              )}
               <div className="font-display text-4xl md:text-5xl text-foreground">
-                {formatARS(p.precio)}
+                {formatARS(precioEfectivo)}
               </div>
               <div className="mt-2 text-sm text-muted-foreground">
                 o 3 cuotas sin interés de{" "}
