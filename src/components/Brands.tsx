@@ -1,6 +1,6 @@
 const brands = [
   { name: "Bosch", image: null },
-  { name: "DeWalt", image: null },
+  { name: "DeWalt", image: "/brands/dewalt.jpg" },
   { name: "Lusqtoff", image: null },
   { name: "Hamilton", image: null },
   { name: "Bremen", image: null },
