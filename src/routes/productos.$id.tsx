@@ -195,8 +195,11 @@ function ProductDetail() {
 
             {/* Price block */}
             <div className="mt-6 border-t border-b border-border py-6">
+              {enOferta && (
+                <div className="text-base text-muted-foreground line-through leading-none mb-1">{formatARS(p.precio)}</div>
+              )}
               <div className="font-display text-4xl md:text-5xl text-foreground">
-                {formatARS(p.precio)}
+                {formatARS(precioEfectivo)}
               </div>
               <div className="mt-2 text-sm text-muted-foreground">
                 o 3 cuotas sin interés de{" "}
