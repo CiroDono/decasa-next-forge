@@ -106,7 +106,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
         <div className="border-t border-white/10">
           <div className="container-x py-4 text-xs text-secondary-foreground/60">
-            © {new Date().getFullYear()} Decasan Herramientas. Todos los derechos reservados.
+            © {new Date().getFullYear()} Decasan Herramientas. Todos los derechos reservados
           </div>
         </div>
       </footer>
