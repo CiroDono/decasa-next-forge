@@ -4,6 +4,7 @@ import { ArrowRight, Truck, ShieldCheck, Headphones, Store } from "lucide-react"
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { Brands } from "@/components/Brands";
+import { LocationSection } from "@/components/LocationSection";
 import { fetchProductos, fetchCategorias } from "@/lib/products";
 import heroImg from "@/assets/hero.jpg";
 
@@ -136,29 +137,8 @@ function Index() {
         )}
       </section>
 
-      {/* CTA */}
-      <section className="bg-secondary text-secondary-foreground">
-        <div className="container-x py-16 grid md:grid-cols-2 gap-8 items-center">
-          <div>
-            <h3 className="font-display text-3xl md:text-4xl">
-              ¿Necesitás <span className="text-primary">asesoramiento</span> técnico?
-            </h3>
-            <p className="mt-3 text-secondary-foreground/80 max-w-md">
-              Hablá con nuestro equipo. 50 años de experiencia eligiendo la herramienta correcta para cada trabajo.
-            </p>
-          </div>
-          <div className="md:justify-self-end">
-            <a
-              href="https://wa.me/5493548000000"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 font-display tracking-wide hover:bg-primary/90"
-            >
-              Consultar por WhatsApp <ArrowRight className="size-4" />
-            </a>
-          </div>
-        </div>
-      </section>
+      {/* LOCATION SECTION */}
+      <LocationSection />
     </Layout>
   );
 }
