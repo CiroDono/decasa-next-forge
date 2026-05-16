@@ -108,7 +108,7 @@ function ProductDetail() {
 
   const addToCart = () => {
     add(
-      { id: p.id, nombre: p.nombre ?? "", precio: p.precio ?? 0, sku: p.sku },
+      { id: p.id, nombre: p.nombre ?? "", precio: precioEfectivo, sku: p.sku },
       qty,
     );
     toast.success(`${qty} × agregado al carrito`, { description: p.nombre ?? "" });
