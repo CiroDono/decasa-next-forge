@@ -20,6 +20,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,11 +53,21 @@ function LoginPage() {
 
   async function handleReset() {
     if (!email) return toast.error("Ingresá tu email primero");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Te enviamos un email para restablecer la contraseña");
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Te enviamos un email para restablecer la contraseña");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al enviar el email");
+    } finally {
+      setResetLoading(false);
+    }
   }
 
   return (
@@ -118,8 +129,13 @@ function LoginPage() {
             {mode === "login" ? "Crear cuenta nueva" : "Ya tengo cuenta"}
           </button>
           {mode === "login" && (
-            <button type="button" onClick={handleReset} className="text-muted-foreground hover:text-primary">
-              Olvidé mi contraseña
+            <button 
+              type="button" 
+              onClick={handleReset} 
+              disabled={resetLoading || !email}
+              className="text-muted-foreground hover:text-primary disabled:opacity-50"
+            >
+              {resetLoading ? "Enviando..." : "Olvidé mi contraseña"}
             </button>
           )}
         </div>
