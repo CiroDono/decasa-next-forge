@@ -176,7 +176,11 @@ export function InstagramReels() {
           className={`lg:hidden transition-all duration-1000 delay-200 ${
             isVisible
               ? "opacity-100 translate-y-0"
-             a
+              : "opacity-0 translate-y-10"
+          }`}
+        >
+          <div className="relative">
+            <a
               href={FEATURED_REELS[currentIndex].url}
               target="_blank"
               rel="noopener noreferrer"
