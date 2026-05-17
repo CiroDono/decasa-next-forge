@@ -7,7 +7,7 @@ export function LocationSection() {
     <section id="contacto" className="py-20 lg:py-28 bg-surface">
       <div className="container-x">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="inline-block text-xs font-bold uppercase tracking-widest text-primary mb-3"><strong>Visitanos</strong></span>
+          <span className="inline-block text-sm font-extrabold uppercase tracking-widest text-primary mb-3"><strong>Visitanos</strong></span>
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground mb-4">
             Estamos en el corazón de <span className="text-primary">La Falda</span>
           </h2>
