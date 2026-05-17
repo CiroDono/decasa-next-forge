@@ -10,18 +10,18 @@ interface Reel {
 const FEATURED_REELS: Reel[] = [
   {
     id: "1",
-    url: "https://www.instagram.com/reel/ABC123/embed",
-    title: "Técnicas de herramientas",
+    url: "https://www.instagram.com/reel/DYR8dscmilD/",
+    title: "Oferta imperdible",
   },
   {
     id: "2",
-    url: "https://www.instagram.com/reel/DEF456/embed",
-    title: "Proyectos destacados",
+    url: "https://www.instagram.com/reel/DXt2by-AKhi/",
+    title: "Tips profesionales",
   },
   {
     id: "3",
-    url: "https://www.instagram.com/reel/GHI789/embed",
-    title: "Tips profesionales",
+    url: "https://www.instagram.com/reel/DXhSmb4DYnZ/",
+    title: "Ganadores del sorteo",
   },
 ];
 
@@ -108,13 +108,12 @@ export function InstagramReels() {
           </h2>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Descubrí nuestros mejores trabajos, tips profesionales y proyectos
-            destacados. Dale like, comenta y síguenos para estar siempre
-            actualizado.
+            Descubrí nuestras ofertas, tips profesionales y proyectos
+            destacados.
           </p>
 
           <a
-            href="https://www.instagram.com/decasan.herramientas"
+            href="https://www.instagram.com/decasanherramientas/"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-medium rounded-lg hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 group"
@@ -237,37 +236,7 @@ export function InstagramReels() {
           </div>
         </div>
 
-        {/* CALL TO ACTION */}
-        <div
-          className={`mt-16 text-center transition-all duration-1000 delay-300 ${
-            isVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-10"
-          }`}
-        >
-          <p className="text-muted-foreground mb-4">
-            ¿Te gustó? Compartí tus experiencias con nuestros productos
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="https://www.instagram.com/decasan.herramientas"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center justify-center gap-2 group"
-            >
-              <Instagram className="size-5 group-hover:scale-110 transition-transform" />
-              Síguenos en Instagram
-            </a>
-            <a
-              href="https://www.instagram.com/decasan.herramientas"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 border border-border text-foreground font-medium rounded-lg hover:border-primary hover:text-primary transition-colors"
-            >
-              Etiquétanos
-            </a>
-          </div>
-        </div>
+
       </div>
     </section>
   );
