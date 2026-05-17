@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Instagram } from "lucide-react";
+import { ChevronLeft, ChevronRight, Instagram, Play } from "lucide-react";
 
 interface Reel {
   id: string;
@@ -132,37 +132,42 @@ export function InstagramReels() {
               : "opacity-0 translate-y-10"
           }`}
         >
-          {FEATURED_REELS.map((reel, idx) => (
-            <div
+          {FEATURED_REELS.map((reel) => (
+            <a
               key={reel.id}
-              className="group relative overflow-hidden rounded-2xl aspect-[9/16] bg-muted border border-border shadow-lg hover:shadow-xl transition-all duration-300"
+              href={reel.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative overflow-hidden rounded-2xl aspect-[9/16] bg-gradient-to-br from-primary/20 via-primary/10 to-background border border-border shadow-lg hover:shadow-xl hover:border-primary transition-all duration-300"
             >
-              {/* Background gradient para loadings */}
-              <div className="absolute inset-0 bg-gradient-to-br from-surface-elevated via-muted to-muted opacity-50" />
-
-              {/* Instagram Embed */}
-              <div className="relative size-full overflow-hidden">
-                <iframe
-                  src={reel.url}
-                  width="100%"
-                  height="100%"
-                  className="size-full border-0"
-                  loading="lazy"
-                  title={reel.title}
-                />
+              {/* Background pattern */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-primary/20 transition-transform group-hover:scale-110 duration-500">
+                  <Instagram className="size-32" strokeWidth={0.5} />
+                </div>
               </div>
 
-              {/* Overlay gradient - hover effect */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              {/* Overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Play button icon */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="size-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:bg-white/30 transition-all">
+                  <Play className="size-7 text-white fill-white" />
+                </div>
+              </div>
 
               {/* Title overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-white text-sm font-medium">{reel.title}</p>
+                <p className="text-white/70 text-xs mt-2 flex items-center gap-1">
+                  <Instagram className="size-3" /> Ver en Instagram
+                </p>
               </div>
 
               {/* Shine effect on hover */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 pointer-events-none" />
-            </div>
+            </a>
           ))}
         </div>
 
@@ -171,28 +176,35 @@ export function InstagramReels() {
           className={`lg:hidden transition-all duration-1000 delay-200 ${
             isVisible
               ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-10"
-          }`}
-        >
-          <div className="relative">
-            {/* Carousel container */}
-            <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-muted border border-border">
-              <div className="absolute inset-0 bg-gradient-to-br from-surface-elevated via-muted to-muted opacity-50" />
+             a
+              href={FEATURED_REELS[currentIndex].url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative block aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-background border border-border cursor-pointer hover:border-primary transition-all duration-300"
+            >
+              {/* Background pattern */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-primary/20 transition-transform group-hover:scale-110 duration-500">
+                  <Instagram className="size-32" strokeWidth={0.5} />
+                </div>
+              </div>
 
-              <div className="relative size-full overflow-hidden">
-                <iframe
-                  src={FEATURED_REELS[currentIndex].url}
-                  width="100%"
-                  height="100%"
-                  className="size-full border-0"
-                  loading="lazy"
-                  title={FEATURED_REELS[currentIndex].title}
-                />
+              {/* Overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Play button icon */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="size-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:bg-white/30 transition-all">
+                  <Play className="size-7 text-white fill-white" />
+                </div>
               </div>
 
               {/* Navigation buttons */}
               <button
-                onClick={handlePrev}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handlePrev();
+                }}
                 className="absolute left-3 top-1/2 -translate-y-1/2 size-10 bg-background/80 backdrop-blur-sm border border-border rounded-lg flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors z-10"
                 aria-label="Reel anterior"
               >
@@ -200,7 +212,10 @@ export function InstagramReels() {
               </button>
 
               <button
-                onClick={handleNext}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNext();
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 size-10 bg-background/80 backdrop-blur-sm border border-border rounded-lg flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors z-10"
                 aria-label="Reel siguiente"
               >
@@ -212,12 +227,33 @@ export function InstagramReels() {
                 {FEATURED_REELS.map((_, idx) => (
                   <button
                     key={idx}
-                    onClick={() => goToSlide(idx)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToSlide(idx);
+                    }}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       idx === currentIndex
                         ? "bg-primary w-6"
                         : "bg-white/40 w-2 hover:bg-white/60"
                     }`}
+                    aria-label={`Ir al reel ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Title overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p className="text-white text-sm font-medium">
+                  {FEATURED_REELS[currentIndex].title}
+                </p>
+                <p className="text-white/70 text-xs mt-2 flex items-center gap-1">
+                  <Instagram className="size-3" /> Ver en Instagram
+                </p>
+              </div>
+
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 pointer-events-none" />
+            </a   }`}
                     aria-label={`Ir al reel ${idx + 1}`}
                   />
                 ))}
