@@ -255,11 +255,30 @@ export const adminReorderProductImages = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function extractStorageKey(url: string | null | undefined, bucket = "product-images"): string | null {
+  if (!url) return null;
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const i = url.indexOf(marker);
+  if (i < 0) return null;
+  return decodeURIComponent(url.slice(i + marker.length).split("?")[0]);
+}
+
 export const adminDeleteProductImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
+    // Leer la fila para conocer los archivos del bucket asociados.
+    const { data: row } = await context.supabase
+      .from("product_images")
+      .select("url, url_webp")
+      .eq("id", data.id)
+      .maybeSingle();
+    const keys = [extractStorageKey(row?.url), extractStorageKey(row?.url_webp)].filter(Boolean) as string[];
+    if (keys.length) {
+      // Best-effort: si falla la limpieza del storage, igual borramos el registro.
+      await context.supabase.storage.from("product-images").remove(keys).catch(() => {});
+    }
     const { error } = await context.supabase.from("product_images").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
