@@ -118,12 +118,12 @@ function LoginPage() {
             {mode === "login" ? "Crear cuenta nueva" : "Ya tengo cuenta"}
           </button>
           {mode === "login" && (
-            <button type="button" onClick={handleReset} className="text-muted-foreground hover:text-primary">
+            <button type="button" onClick={handleReset} className="border border-black px-3 py-1 hover:bg-black hover:text-white transition">
               Olvidé mi contraseña
             </button>
           )}
         </div>
-        <Link to="/" className="block text-center mt-8 text-xs text-muted-foreground hover:text-primary">
+        <Link to="/" className="inline-block text-center mt-8 text-xs border border-black px-3 py-1 hover:bg-black hover:text-white transition">
           ← Volver al inicio
         </Link>
       </div>
