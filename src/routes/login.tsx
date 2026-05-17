@@ -113,7 +113,7 @@ function LoginPage() {
           <button
             type="button"
             onClick={() => setMode(mode === "login" ? "register" : "login")}
-            className="text-primary hover:underline"
+            className={mode === "login" ? "border border-black px-3 py-1 hover:bg-black hover:text-white transition" : "text-primary hover:underline"}
           >
             {mode === "login" ? "Crear cuenta nueva" : "Ya tengo cuenta"}
           </button>
