@@ -13,10 +13,10 @@ export function Footer() {
               Ferretería, herramientas y materiales en La Falda. +60 años acompañando proyectos.
             </p>
             <div className="flex gap-2">
-              <a href="#" aria-label="Facebook" className="size-9 rounded-lg bg-secondary-foreground/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+              <a href="https://web.facebook.com/p/Decasan-Herramientas-100036108051965/?locale=es_LA&_rdc=1&_rdr" aria-label="Facebook" className="size-9 rounded-lg bg-secondary-foreground/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
                 <Facebook className="size-4" />
               </a>
-              <a href="#" aria-label="Instagram" className="size-9 rounded-lg bg-secondary-foreground/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+              <a href="https://www.instagram.com/decasanherramientas/" aria-label="Instagram" className="size-9 rounded-lg bg-secondary-foreground/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
                 <Instagram className="size-4" />
               </a>
             </div>
