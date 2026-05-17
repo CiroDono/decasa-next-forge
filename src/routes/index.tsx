@@ -4,6 +4,7 @@ import { ArrowRight, Truck, ShieldCheck, Headphones, Store } from "lucide-react"
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { Brands } from "@/components/Brands";
+import { InstagramReels } from "@/components/InstagramReels";
 import { LocationSection } from "@/components/LocationSection";
 import { fetchProductos, fetchCategorias } from "@/lib/products";
 import heroImg from "@/assets/hero.jpg";
@@ -136,6 +137,9 @@ function Index() {
           </div>
         )}
       </section>
+
+      {/* INSTAGRAM REELS SECTION */}
+      <InstagramReels />
 
       {/* LOCATION SECTION */}
       <LocationSection />
