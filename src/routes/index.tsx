@@ -112,7 +112,7 @@ function Index() {
       <Brands />
 
       {/* featured */}
-      <section className="container-x pb-20">
+      <section className="container-x py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
             <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Destacados</div>
