@@ -1,20 +1,41 @@
-const brands = ["Bosch", "DeWalt", "Lusqtoff", "Hamilton", "Bremen", "Total", "Milwaukee", "Otras" ];
+const brands = [
+  { name: "Bosch", image: "/brands/bosch.png" },
+  { name: "DeWalt", image: "/brands/DeWalt.png" },
+  { name: "Lusqtoff", image: "/brands/Lusqtoff.jpg" },
+  { name: "Hamilton", image: "/brands/Hamilton.png" },
+  { name: "Bremen", image: "/brands/BREMEN.png" },
+  { name: "Total", image: "/brands/Total.png" },
+  { name: "Milwaukee", image: "/brands/Logo-Milwaukee.png" },
+  { name: "Otras", image: "/brands/otras.jpg" },
+];
 
 export function Brands() {
   return (
     <section id="marcas" className="py-16 lg:py-20 bg-background border-y border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
-          <span className="inline-block text-xs font-bold uppercase tracking-widest text-yellow-500 mb-2">Marcas</span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Trabajamos con las mejores marcas</h2>
+          <span className="inline-block text-xs font-bold uppercase tracking-widest text-yellow-500 mb-2">
+            Marcas
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+            Trabajamos con las mejores marcas
+          </h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
           {brands.map((b) => (
             <div
-              key={b}
-              className="aspect-[3/2] bg-surface border border-border rounded-xl flex items-center justify-center text-foreground/70 font-bold text-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-card transition-all"
+              key={b.name}
+              className="aspect-[3/2] border border-border rounded-xl flex items-center justify-center font-bold text-sm hover:shadow-card transition-all overflow-hidden relative group"
+              style={{
+                backgroundImage: `url('${b.image}')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
             >
-              {b}
+              {/* Imagen de fondo borrosa */}
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all backdrop-blur-md" />
+              {/* Texto */}
+              <span className="relative z-10 text-white font-bold text-center px-2">{b.name}</span>
             </div>
           ))}
         </div>
