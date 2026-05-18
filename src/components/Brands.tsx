@@ -5,7 +5,7 @@ const brands = [
   { name: "Hamilton", image: "/brands/Hamilton.png" },
   { name: "Bremen", image: "/brands/BREMEN.png" },
   { name: "Total", image: "/brands/Total.png" },
-  { name: "Milwaukee", image: "/brands/Logo-Milwaukee.png" },
+  { name: "Milwaukee", image: "/brands/Logo-Milwaukee.jpg" },
   { name: "Otras", image: "/brands/otras.jpg" },
 ];
 
@@ -33,7 +33,7 @@ export function Brands() {
               }}
             >
               {/* Imagen de fondo borrosa */}
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all backdrop-blur-md" />
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all backdrop-blur-sm" />
               {/* Texto */}
               <span className="relative z-10 text-white font-bold text-center px-2">{b.name}</span>
             </div>
