@@ -14,21 +14,21 @@ const FEATURED_REELS: Reel[] = [
     url: "https://www.instagram.com/reel/DYR8dscmilD/",
     title: "Oferta imperdible",
     thumbnail:
-      "https://images.unsplash.com/photo-1579546395360-7eb06cf1fc4e?w=500&h=800&fit=crop",
+      "/imagenes/reel1.jpg",
   },
   {
     id: "2",
     url: "https://www.instagram.com/reel/DXt2by-AKhi/",
     title: "Tips profesionales",
     thumbnail:
-      "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=500&h=800&fit=crop",
+      "/imagenes/reel2.jpg",
   },
   {
     id: "3",
     url: "https://www.instagram.com/reel/DXhSmb4DYnZ/",
     title: "Ganadores del sorteo",
     thumbnail:
-      "https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=800&fit=crop",
+      "/imagenes/reel3.jpg",
   },
 ];
 
