@@ -85,7 +85,7 @@ function Index() {
       <section className="container-x py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Categorías</div>
+            <div className="text-xs uppercase tracking-[0.25em] text-black mb-2">Categorías</div>
             <h2 className="font-display text-3xl md:text-4xl">Explorá por rubro</h2>
           </div>
           <Link to="/productos" className="text-sm font-medium hover:text-primary hidden sm:block">
@@ -116,7 +116,7 @@ function Index() {
       <section className="container-x py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Destacados</div>
+            <div className="text-xs uppercase tracking-[0.25em] text-black mb-2">Destacados</div>
             <h2 className="font-display text-3xl md:text-4xl">Más vendidos</h2>
           </div>
           <Link to="/productos" className="text-sm font-medium hover:text-primary hidden sm:block">

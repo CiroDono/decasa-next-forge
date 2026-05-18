@@ -95,7 +95,7 @@ export function InstagramReels() {
             href="https://www.instagram.com/decasanherramientas/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-primary text-white rounded-lg"
+            className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-primary text-black rounded-lg"
           >
             <Instagram className="size-5" />
             Ver más contenido
