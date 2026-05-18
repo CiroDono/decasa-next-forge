@@ -58,7 +58,7 @@ export function HeaderSearch({ compact = false }: { compact?: boolean }) {
       >
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
         <input
-          type="search"
+          type="text"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
