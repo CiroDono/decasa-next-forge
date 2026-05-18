@@ -14,21 +14,21 @@ const FEATURED_REELS: Reel[] = [
     url: "https://www.instagram.com/reel/DYR8dscmilD/",
     title: "Oferta imperdible",
     thumbnail:
-      "/imagenes/reel1.jpg",
+      "/reel1.png",
   },
   {
     id: "2",
     url: "https://www.instagram.com/reel/DXt2by-AKhi/",
     title: "Tips profesionales",
     thumbnail:
-      "/imagenes/reel2.jpg",
+      "/reel2.png",
   },
   {
     id: "3",
     url: "https://www.instagram.com/reel/DXhSmb4DYnZ/",
     title: "Ganadores del sorteo",
     thumbnail:
-      "/imagenes/reel3.jpg",
+      "/reel3.png",
   },
 ];
 
