@@ -7,11 +7,15 @@ export function LocationSection() {
     <section id="contacto" className="py-20 lg:py-28 bg-surface">
       <div className="container-x">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="inline-block text-sm font-extrabold uppercase tracking-widest text-primary mb-3"><strong>Visitanos</strong></span>
+          <span className="inline-block text-sm font-extrabold uppercase tracking-widest text-black mb-3">
+            <strong>Visitanos</strong>
+          </span>
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-foreground mb-4">
             Estamos en el corazón de <span className="text-primary">La Falda</span>
           </h2>
-          <p className="text-muted-foreground text-lg">Pasá por el local, te atendemos personalmente.</p>
+          <p className="text-muted-foreground text-lg">
+            Pasá por el local, te atendemos personalmente.
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-6">
@@ -30,7 +34,9 @@ export function LocationSection() {
               <div className="flex items-start gap-3 mb-1">
                 <MapPin className="size-5 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Dirección</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                    Dirección
+                  </div>
                   <div className="font-semibold text-foreground">Av. Pres. Kennedy 270</div>
                   <div className="text-sm text-muted-foreground">La Falda, Córdoba, Argentina</div>
                 </div>
@@ -41,7 +47,9 @@ export function LocationSection() {
               <div className="flex items-start gap-3 mb-4">
                 <Phone className="size-5 text-primary shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Teléfono</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                    Teléfono
+                  </div>
                   <a className="text-lg font-bold text-foreground hover:text-primary transition-colors">
                     +54 3548 59-2127
                   </a>
