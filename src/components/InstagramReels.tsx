@@ -257,12 +257,7 @@ export function InstagramReels() {
 
               {/* Shine effect on hover */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 pointer-events-none" />
-            </a   }`}
-                    aria-label={`Ir al reel ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
+            </a>
 
             {/* Title below carousel */}
             <div className="mt-4 text-center">
@@ -275,7 +270,6 @@ export function InstagramReels() {
             </div>
           </div>
         </div>
-
 
       </div>
     </section>
