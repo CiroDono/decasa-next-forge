@@ -5,6 +5,7 @@ interface Reel {
   id: string;
   url: string;
   title: string;
+  thumbnail?: string;
 }
 
 const FEATURED_REELS: Reel[] = [
@@ -12,16 +13,19 @@ const FEATURED_REELS: Reel[] = [
     id: "1",
     url: "https://www.instagram.com/reel/DYR8dscmilD/",
     title: "Oferta imperdible",
+    thumbnail: "https://images.unsplash.com/photo-1579546395360-7eb06cf1fc4e?w=500&h=800&fit=crop",
   },
   {
     id: "2",
     url: "https://www.instagram.com/reel/DXt2by-AKhi/",
     title: "Tips profesionales",
+    thumbnail: "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=500&h=800&fit=crop",
   },
   {
     id: "3",
     url: "https://www.instagram.com/reel/DXhSmb4DYnZ/",
     title: "Ganadores del sorteo",
+    thumbnail: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=800&fit=crop",
   },
 ];
 
@@ -140,15 +144,24 @@ export function InstagramReels() {
               rel="noopener noreferrer"
               className="group relative overflow-hidden rounded-2xl aspect-[9/16] bg-gradient-to-br from-primary/20 via-primary/10 to-background border border-border shadow-lg hover:shadow-xl hover:border-primary transition-all duration-300"
             >
-              {/* Background pattern */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-primary/20 transition-transform group-hover:scale-110 duration-500">
-                  <Instagram className="size-32" strokeWidth={0.5} />
+              {/* Background image */}
+              {reel.thumbnail ? (
+                <img
+                  src={reel.thumbnail}
+                  alt={reel.title}
+                  className="absolute inset-0 size-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/10 to-background">
+                  <div className="text-primary/20 transition-transform group-hover:scale-110 duration-500">
+                    <Instagram className="size-32" strokeWidth={0.5} />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-100 group-hover:from-black/70 group-hover:via-black/30 transition-all duration-300" />
 
               {/* Play button icon */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -158,7 +171,7 @@ export function InstagramReels() {
               </div>
 
               {/* Title overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
                 <p className="text-white text-sm font-medium">{reel.title}</p>
                 <p className="text-white/70 text-xs mt-2 flex items-center gap-1">
                   <Instagram className="size-3" /> Ver en Instagram
@@ -177,15 +190,24 @@ export function InstagramReels() {
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-10"
-          }`}
-        >
-          <div className="relative">
-            <a
-              href={FEATURED_REELS[currentIndex].url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative block aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-background border border-border cursor-pointer hover:border-primary transition-all duration-300"
-            >
+          }`}image */}
+              {FEATURED_REELS[currentIndex].thumbnail ? (
+                <img
+                  src={FEATURED_REELS[currentIndex].thumbnail}
+                  alt={FEATURED_REELS[currentIndex].title}
+                  className="absolute inset-0 size-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/10 to-background">
+                  <div className="text-primary/20 transition-transform group-hover:scale-110 duration-500">
+                    <Instagram className="size-32" strokeWidth={0.5} />
+                  </div>
+                </div>
+              )}
+
+              {/* Overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-100 group-hover:from-black/70 group-hover:via-black/30 transition-all
               {/* Background pattern */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-primary/20 transition-transform group-hover:scale-110 duration-500">
