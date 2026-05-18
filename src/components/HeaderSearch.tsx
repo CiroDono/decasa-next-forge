@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, X } from "lucide-react";
 import { fetchProductos, type Producto } from "@/lib/products";
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
@@ -69,6 +69,19 @@ export function HeaderSearch({ compact = false }: { compact?: boolean }) {
           className="w-full bg-background border border-border pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-primary rounded-sm"
           aria-label="Buscar productos"
         />
+        {q && (
+          <button
+            type="button"
+            onClick={() => {
+              setQ("");
+              setItems([]);
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Limpiar"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
       </form>
 
       {open && q.trim().length >= 2 && (
