@@ -1,5 +1,5 @@
 const brands = [
-  { name: "Bosch", image: "/brands/bosch.png" },
+  { name: "Bosch", image: "/brands/Bosch.png" },
   { name: "DeWalt", image: "/brands/DeWalt.png" },
   { name: "Lusqtoff", image: "/brands/Lusqtoff.jpg" },
   { name: "Hamilton", image: "/brands/Hamilton.png" },
@@ -33,7 +33,7 @@ export function Brands() {
               }}
             >
               {/* Imagen de fondo borrosa */}
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all backdrop-blur-sm" />
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all backdrop-blur-[1px]" />
               {/* Texto */}
               <span className="relative z-10 text-white font-bold text-center px-2">{b.name}</span>
             </div>
