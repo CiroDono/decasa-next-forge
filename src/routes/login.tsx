@@ -12,6 +12,19 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+function translateAuthError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("email not confirmed")) return "Tenés que confirmar tu email antes de ingresar. Revisá tu casilla (y la carpeta de Spam).";
+  if (m.includes("invalid login credentials")) return "Email o contraseña incorrectos.";
+  if (m.includes("user already registered")) return "Ya existe una cuenta con ese email. Iniciá sesión.";
+  if (m.includes("email rate limit") || m.includes("rate limit")) return "Demasiados intentos. Esperá unos minutos antes de volver a probar.";
+  if (m.includes("password should be at least")) return "La contraseña debe tener al menos 6 caracteres.";
+  if (m.includes("unable to validate email") || m.includes("invalid email")) return "El email no es válido.";
+  if (m.includes("signup is disabled")) return "El registro está deshabilitado temporalmente.";
+  if (m.includes("network")) return "Error de red. Verificá tu conexión.";
+  return msg;
+}
+
 function LoginPage() {
   const search = useSearch({ from: "/login" });
   const navigate = useNavigate();
@@ -20,13 +33,15 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsConfirm, setNeedsConfirm] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setNeedsConfirm(null);
     try {
       if (mode === "register") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -35,8 +50,14 @@ function LoginPage() {
           },
         });
         if (error) throw error;
-        toast.success("Cuenta creada. Revisá tu email para confirmar.");
-        setMode("login");
+        if (!data.session) {
+          setNeedsConfirm(email);
+          toast.success("Cuenta creada. Te enviamos un email para confirmar tu cuenta antes de ingresar.");
+          setMode("login");
+        } else {
+          toast.success("Bienvenido");
+          navigate({ to: search.redirect });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -44,10 +65,26 @@ function LoginPage() {
         navigate({ to: search.redirect });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error");
+      const raw = err instanceof Error ? err.message : "Error";
+      if (/email.*not.*confirm/i.test(raw)) setNeedsConfirm(email);
+      toast.error(translateAuthError(raw));
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResendConfirm() {
+    const target = needsConfirm || email;
+    if (!target) return toast.error("Ingresá tu email primero");
+    setLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: target,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    setLoading(false);
+    if (error) toast.error(translateAuthError(error.message));
+    else toast.success("Te reenviamos el email de confirmación");
   }
 
   async function handleReset() {
@@ -55,7 +92,7 @@ function LoginPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(translateAuthError(error.message));
     else toast.success("Te enviamos un email para restablecer la contraseña");
   }
 
@@ -68,6 +105,23 @@ function LoginPage() {
             ? "Accedé para ver tus pedidos y comprar."
             : "Registrate para comprar y recibir tu historial."}
         </p>
+
+        {needsConfirm && (
+          <div className="mb-6 border border-border bg-muted/40 p-3 text-sm">
+            <p className="mb-2">
+              Aún no confirmaste el email <strong>{needsConfirm}</strong>. Revisá tu bandeja de entrada y la carpeta de Spam.
+            </p>
+            <button
+              type="button"
+              onClick={handleResendConfirm}
+              disabled={loading}
+              className="text-primary hover:underline disabled:opacity-50"
+            >
+              Reenviar email de confirmación
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "register" && (
             <div>
@@ -112,7 +166,7 @@ function LoginPage() {
         <div className="mt-6 flex items-center justify-between text-sm">
           <button
             type="button"
-            onClick={() => setMode(mode === "login" ? "register" : "login")}
+            onClick={() => { setMode(mode === "login" ? "register" : "login"); setNeedsConfirm(null); }}
             className={mode === "login" ? "border border-black px-3 py-1 hover:bg-black hover:text-white transition" : "text-primary hover:underline"}
           >
             {mode === "login" ? "Crear cuenta nueva" : "Ya tengo cuenta"}
