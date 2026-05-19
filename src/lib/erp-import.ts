@@ -34,17 +34,16 @@ function parseMoney(value: unknown) {
   if (!raw) return null;
   const cleaned = raw.replace(/[^\d,.-]/g, "");
   const hasComma = cleaned.includes(",");
-  const hasDot = cleaned.includes(".");
   const normalized = hasComma
     ? cleaned.replace(/\./g, "").replace(",", ".")
-    : cleaned;
+    : cleaned.replace(/\./g, "");
   const parsed = Number(normalized);
-  return normalizeErpPrice(parsed);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function normalizeErpPrice(value: number) {
   if (!Number.isFinite(value)) return null;
-  if (Number.isInteger(value) && value >= 1000 && value % 1000 === 0) {
+  if (Number.isInteger(value) && value > 100000 && value % 1000 === 0) {
     return value / 1000;
   }
   return value;
