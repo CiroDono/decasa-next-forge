@@ -29,17 +29,25 @@ function normalizeSku(value: unknown) {
 }
 
 function parseMoney(value: unknown) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "number") return normalizeErpPrice(value);
   const raw = String(value ?? "").trim();
   if (!raw) return null;
   const cleaned = raw.replace(/[^\d,.-]/g, "");
   const hasComma = cleaned.includes(",");
   const hasDot = cleaned.includes(".");
-  const normalized = hasComma && hasDot
+  const normalized = hasComma
     ? cleaned.replace(/\./g, "").replace(",", ".")
-    : cleaned.replace(",", ".");
+    : cleaned;
   const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
+  return normalizeErpPrice(parsed);
+}
+
+function normalizeErpPrice(value: number) {
+  if (!Number.isFinite(value)) return null;
+  if (Number.isInteger(value) && value >= 1000 && value % 1000 === 0) {
+    return value / 1000;
+  }
+  return value;
 }
 
 function getValue(row: Record<string, unknown>, aliases: readonly string[]) {
