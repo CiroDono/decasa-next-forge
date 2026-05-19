@@ -130,10 +130,12 @@ function AdminProductos() {
   }
 
   async function importRows(rows: ErpImportRow[]) {
-    const chunks = chunkRows(rows, 4000);
+    const chunks = chunkRows(rows, IMPORT_CHUNK_SIZE);
     let updated = 0;
     let created = 0;
-    for (const chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
+      toast.info(`Importando lote ${i + 1} de ${chunks.length}`);
+      const chunk = chunks[i];
       const res = await importErp({ data: { rows: chunk } });
       updated += res.updated;
       created += res.created;
@@ -316,6 +318,8 @@ function chunkRows<T>(rows: T[], size: number) {
   return chunks;
 }
 
+const IMPORT_CHUNK_SIZE = 100;
+
 type ImportPreview = {
   created: ErpImportRow[];
   updated: Array<{ row: ErpImportRow; changes: Array<{ field: string; before: unknown; after: unknown }> }>;
@@ -331,6 +335,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [tab, setTab] = useState<"created" | "updated">("created");
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
   const [fileName, setFileName] = useState("");
 
   async function loadFile(file: File | null) {
@@ -341,11 +346,15 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
       setRows(parsed);
       setFileName(file.name);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
-      else setPreview(await previewRows(parsed, onPreview));
+      else {
+        setStatus(`Analizando ${parsed.length} productos...`);
+        setPreview(await previewRows(parsed, onPreview, setStatus));
+      }
     } catch (e: any) {
-      toast.error(e?.message ?? "No pude leer el Excel");
+      toast.error(formatError(e));
     } finally {
       setBusy(false);
+      setStatus("");
     }
   }
 
@@ -353,9 +362,13 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
     if (!rows.length) return;
     setBusy(true);
     try {
+      setStatus(`Importando ${rows.length} productos...`);
       await onImport(rows);
+    } catch (e: any) {
+      toast.error(formatError(e));
     } finally {
       setBusy(false);
+      setStatus("");
     }
   }
 
@@ -388,7 +401,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
         )}
 
         <div className="flex items-center justify-between gap-3 mt-5">
-          <span className="text-xs text-muted-foreground">{rows.length ? `${rows.length} filas listas para importar` : "Esperando archivo"}</span>
+          <span className="text-xs text-muted-foreground">{status || (rows.length ? `${rows.length} filas listas para importar` : "Esperando archivo")}</span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm">Cancelar</button>
             <button disabled={busy || rows.length === 0} onClick={apply} className="bg-primary text-primary-foreground px-5 py-2 text-sm font-medium disabled:opacity-50">
@@ -401,15 +414,27 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   );
 }
 
-async function previewRows(rows: ErpImportRow[], onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>) {
+async function previewRows(rows: ErpImportRow[], onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>, onStatus: (status: string) => void) {
   const summary: ImportPreview = { created: [], updated: [], unchanged: 0 };
-  for (const chunk of chunkRows(rows, 4000)) {
+  const chunks = chunkRows(rows, IMPORT_CHUNK_SIZE);
+  for (let i = 0; i < chunks.length; i++) {
+    onStatus(`Analizando lote ${i + 1} de ${chunks.length}`);
+    const chunk = chunks[i];
     const partial = await onPreview(chunk);
     summary.created.push(...partial.created);
     summary.updated.push(...partial.updated);
     summary.unchanged += partial.unchanged;
   }
   return summary;
+}
+
+function formatError(error: any) {
+  if (typeof error?.message === "string" && error.message) return error.message;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "No pude procesar el archivo.";
+  }
 }
 
 function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
