@@ -52,10 +52,12 @@ function getValue(row: Record<string, unknown>, aliases: readonly string[]) {
   return null;
 }
 
-export async function parseErpExcelFile(file: File): Promise<ErpImportRow[]> {
+export async function parseErpProductFile(file: File): Promise<ErpImportRow[]> {
   const XLSX = await import("xlsx");
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "array" });
+  const isCsv = file.name.toLowerCase().endsWith(".csv") || file.type === "text/csv";
+  const workbook = isCsv
+    ? XLSX.read(await file.text(), { type: "string", raw: true })
+    : XLSX.read(await file.arrayBuffer(), { type: "array" });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error("El archivo no tiene hojas.");
   const sheet = workbook.Sheets[sheetName];
@@ -82,3 +84,5 @@ export async function parseErpExcelFile(file: File): Promise<ErpImportRow[]> {
 
   return parsed;
 }
+
+export const parseErpExcelFile = parseErpProductFile;

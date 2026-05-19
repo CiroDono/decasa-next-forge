@@ -11,7 +11,7 @@ import {
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
 import { ProductGalleryAdmin } from "@/components/ProductGalleryAdmin";
-import { parseErpExcelFile, type ErpImportRow } from "@/lib/erp-import";
+import { parseErpProductFile, type ErpImportRow } from "@/lib/erp-import";
 
 export const Route = createFileRoute("/_authenticated/admin/productos")({ component: AdminProductos });
 
@@ -311,7 +311,7 @@ function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: 
     if (!file) return;
     setBusy(true);
     try {
-      const parsed = await parseErpExcelFile(file);
+      const parsed = await parseErpProductFile(file);
       setRows(parsed);
       setFileName(file.name);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
@@ -341,8 +341,8 @@ function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: 
         </p>
         <label className="block border border-dashed border-border p-6 text-center cursor-pointer hover:border-primary">
           <Upload className="size-5 mx-auto mb-2 text-muted-foreground" />
-          <span className="text-sm font-medium">{fileName || "Elegir Excel .xlsx"}</span>
-          <input type="file" accept=".xlsx,.xls" className="sr-only" onChange={(e) => loadFile(e.target.files?.[0] ?? null)} />
+          <span className="text-sm font-medium">{fileName || "Elegir Excel o CSV"}</span>
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" className="sr-only" onChange={(e) => loadFile(e.target.files?.[0] ?? null)} />
         </label>
 
         {rows.length > 0 && (
