@@ -319,6 +319,7 @@ function chunkRows<T>(rows: T[], size: number) {
 }
 
 const IMPORT_CHUNK_SIZE = 100;
+const IMPORT_PREVIEW_PAGE_SIZE = 50;
 
 type ImportPreview = {
   created: ErpImportRow[];
@@ -334,6 +335,8 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   const [rows, setRows] = useState<ErpImportRow[]>([]);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [tab, setTab] = useState<"created" | "updated">("created");
+  const [createdPage, setCreatedPage] = useState(1);
+  const [updatedPage, setUpdatedPage] = useState(1);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [fileName, setFileName] = useState("");
@@ -345,6 +348,8 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
       const parsed = await parseErpProductFile(file);
       setRows(parsed);
       setFileName(file.name);
+      setCreatedPage(1);
+      setUpdatedPage(1);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
       else {
         setStatus(`Analizando ${parsed.length} productos...`);
@@ -396,7 +401,17 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
               <button onClick={() => setTab("created")} className={`px-3 py-1.5 border ${tab === "created" ? "border-primary text-foreground" : "border-border text-muted-foreground"}`}>Nuevos</button>
               <button onClick={() => setTab("updated")} className={`px-3 py-1.5 border ${tab === "updated" ? "border-primary text-foreground" : "border-border text-muted-foreground"}`}>Modificados</button>
             </div>
-            {tab === "created" ? <CreatedRowsTable rows={preview.created} /> : <UpdatedRowsTable rows={preview.updated} />}
+            {tab === "created" ? (
+              <>
+                <CreatedRowsTable rows={paginateRows(preview.created, createdPage)} />
+                <ImportPagination total={preview.created.length} page={createdPage} onPageChange={setCreatedPage} />
+              </>
+            ) : (
+              <>
+                <UpdatedRowsTable rows={paginateRows(preview.updated, updatedPage)} />
+                <ImportPagination total={preview.updated.length} page={updatedPage} onPageChange={setUpdatedPage} />
+              </>
+            )}
           </div>
         )}
 
@@ -502,6 +517,33 @@ function UpdatedRowsTable({ rows }: { rows: Array<{ row: ErpImportRow; changes: 
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function paginateRows<T>(rows: T[], page: number) {
+  const start = (page - 1) * IMPORT_PREVIEW_PAGE_SIZE;
+  return rows.slice(start, start + IMPORT_PREVIEW_PAGE_SIZE);
+}
+
+function ImportPagination({ total, page, onPageChange }: { total: number; page: number; onPageChange: (page: number) => void }) {
+  if (total <= IMPORT_PREVIEW_PAGE_SIZE) return null;
+  const totalPages = Math.max(1, Math.ceil(total / IMPORT_PREVIEW_PAGE_SIZE));
+  const start = (page - 1) * IMPORT_PREVIEW_PAGE_SIZE + 1;
+  const end = Math.min(total, page * IMPORT_PREVIEW_PAGE_SIZE);
+
+  return (
+    <div className="flex items-center justify-between gap-3 mt-2 text-xs text-muted-foreground">
+      <span>{start}-{end} de {total}</span>
+      <div className="flex items-center gap-2">
+        <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="border border-border px-3 py-1 text-foreground disabled:opacity-40">
+          Anterior
+        </button>
+        <span>Pag {page} de {totalPages}</span>
+        <button type="button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} className="border border-border px-3 py-1 text-foreground disabled:opacity-40">
+          Siguiente
+        </button>
+      </div>
     </div>
   );
 }
