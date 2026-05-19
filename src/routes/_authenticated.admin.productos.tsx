@@ -130,8 +130,15 @@ function AdminProductos() {
   }
 
   async function importRows(rows: ErpImportRow[]) {
-    const res = await importErp({ data: { rows } });
-    toast.success(`ERP importado: ${res.updated} actualizados, ${res.created} nuevos`);
+    const chunks = chunkRows(rows, 4000);
+    let updated = 0;
+    let created = 0;
+    for (const chunk of chunks) {
+      const res = await importErp({ data: { rows: chunk } });
+      updated += res.updated;
+      created += res.created;
+    }
+    toast.success(`ERP importado: ${updated} actualizados, ${created} nuevos`);
     setImportOpen(false);
     qc.invalidateQueries({ queryKey: ["admin-productos"] });
   }
@@ -303,6 +310,12 @@ function BulkBtn({ icon, label, onClick, danger }: { icon: React.ReactNode; labe
   );
 }
 
+function chunkRows<T>(rows: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let i = 0; i < rows.length; i += size) chunks.push(rows.slice(i, i + size));
+  return chunks;
+}
+
 type ImportPreview = {
   created: ErpImportRow[];
   updated: Array<{ row: ErpImportRow; changes: Array<{ field: string; before: unknown; after: unknown }> }>;
@@ -328,7 +341,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
       setRows(parsed);
       setFileName(file.name);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
-      else setPreview(await onPreview(parsed));
+      else setPreview(await previewRows(parsed, onPreview));
     } catch (e: any) {
       toast.error(e?.message ?? "No pude leer el Excel");
     } finally {
@@ -386,6 +399,17 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
       </div>
     </div>
   );
+}
+
+async function previewRows(rows: ErpImportRow[], onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>) {
+  const summary: ImportPreview = { created: [], updated: [], unchanged: 0 };
+  for (const chunk of chunkRows(rows, 4000)) {
+    const partial = await onPreview(chunk);
+    summary.created.push(...partial.created);
+    summary.updated.push(...partial.updated);
+    summary.unchanged += partial.unchanged;
+  }
+  return summary;
 }
 
 function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
