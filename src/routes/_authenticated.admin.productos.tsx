@@ -440,7 +440,13 @@ async function previewRows(rows: ErpImportRow[], onPreview: (rows: ErpImportRow[
     summary.updated.push(...partial.updated);
     summary.unchanged += partial.unchanged;
   }
+  summary.created.sort((a, b) => compareProductName(a.nombre, b.nombre));
+  summary.updated.sort((a, b) => compareProductName(a.row.nombre, b.row.nombre));
   return summary;
+}
+
+function compareProductName(a: string, b: string) {
+  return a.localeCompare(b, "es", { sensitivity: "base", numeric: true });
 }
 
 function formatError(error: any) {
