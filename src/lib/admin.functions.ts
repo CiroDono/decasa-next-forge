@@ -70,6 +70,8 @@ const productoSchema = z.object({
   categoria: z.string().max(100).optional().nullable(),
   grupo: z.string().max(100).optional().nullable(),
   sku: z.string().max(80).optional().nullable(),
+  codigo_fabricante: z.string().max(120).optional().nullable(),
+  precio_vta_sin_iva: z.number().nonnegative().nullable().optional(),
   precio: z.number().nonnegative(),
   stock: z.number().int().min(0),
   image_url: z.string().max(500).optional().nullable(),
@@ -184,6 +186,64 @@ export const adminBulkProductos = createServerFn({ method: "POST" })
         return { ok: true, updated: data.ids.length };
       }
     }
+  });
+
+const erpImportRowSchema = z.object({
+  sku: z.string().trim().min(1).max(80),
+  nombre: z.string().trim().min(1).max(255),
+  codigo_fabricante: z.string().max(120).optional().nullable(),
+  precio_vta_sin_iva: z.number().nonnegative().nullable().optional(),
+  precio: z.number().nonnegative(),
+});
+
+export const adminImportProductosErp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    rows: z.array(erpImportRowSchema).min(1).max(5000),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const sb = context.supabase;
+    const importId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const skus = data.rows.map((row) => row.sku);
+    const { data: existing, error: readError } = await sb
+      .from("productos")
+      .select("id, sku")
+      .in("sku", skus);
+    if (readError) throw new Error(readError.message);
+
+    const bySku = new Map((existing ?? []).map((row: any) => [row.sku, row.id]));
+    let created = 0;
+    let updated = 0;
+
+    for (const row of data.rows) {
+      const payload = {
+        sku: row.sku,
+        nombre: row.nombre,
+        codigo_fabricante: row.codigo_fabricante ?? null,
+        precio_vta_sin_iva: row.precio_vta_sin_iva ?? null,
+        precio: row.precio,
+        erp_updated_at: now,
+        last_import_id: importId,
+      };
+      const id = bySku.get(row.sku);
+      if (id) {
+        const { error } = await sb.from("productos").update(payload).eq("id", id);
+        if (error) throw new Error(error.message);
+        updated++;
+      } else {
+        const { error } = await sb.from("productos").insert({
+          ...payload,
+          stock: 0,
+          activo: false,
+        });
+        if (error) throw new Error(error.message);
+        created++;
+      }
+    }
+
+    return { ok: true, importId, processed: data.rows.length, created, updated };
   });
 
 // === PRODUCT IMAGES (galería) ===

@@ -207,14 +207,18 @@ export type Database = {
         Row: {
           activo: boolean
           categoria: string | null
+          codigo_fabricante: string | null
           descripcion: string | null
+          erp_updated_at: string | null
           grupo: string | null
           id: number
           image_url: string | null
           image_webp: string | null
+          last_import_id: string | null
           nombre: string | null
           oferta_hasta: string | null
           precio: number | null
+          precio_vta_sin_iva: number | null
           precio_oferta: number | null
           sku: string | null
           stock: number | null
@@ -222,14 +226,18 @@ export type Database = {
         Insert: {
           activo?: boolean
           categoria?: string | null
+          codigo_fabricante?: string | null
           descripcion?: string | null
+          erp_updated_at?: string | null
           grupo?: string | null
           id?: never
           image_url?: string | null
           image_webp?: string | null
+          last_import_id?: string | null
           nombre?: string | null
           oferta_hasta?: string | null
           precio?: number | null
+          precio_vta_sin_iva?: number | null
           precio_oferta?: number | null
           sku?: string | null
           stock?: number | null
@@ -237,14 +245,18 @@ export type Database = {
         Update: {
           activo?: boolean
           categoria?: string | null
+          codigo_fabricante?: string | null
           descripcion?: string | null
+          erp_updated_at?: string | null
           grupo?: string | null
           id?: never
           image_url?: string | null
           image_webp?: string | null
+          last_import_id?: string | null
           nombre?: string | null
           oferta_hasta?: string | null
           precio?: number | null
+          precio_vta_sin_iva?: number | null
           precio_oferta?: number | null
           sku?: string | null
           stock?: number | null

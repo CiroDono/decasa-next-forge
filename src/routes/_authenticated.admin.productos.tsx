@@ -3,25 +3,28 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload } from "lucide-react";
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
-  adminListCategorias, adminListGrupos, adminBulkProductos,
+  adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp,
 } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
 import { ProductGalleryAdmin } from "@/components/ProductGalleryAdmin";
+import { parseErpExcelFile, type ErpImportRow } from "@/lib/erp-import";
 
 export const Route = createFileRoute("/_authenticated/admin/productos")({ component: AdminProductos });
 
 type ProductoForm = {
   id?: number; nombre: string; descripcion: string; categoria: string; grupo: string;
   sku: string; precio: number; stock: number;
+  codigo_fabricante: string; precio_vta_sin_iva: number | null;
   image_url: string; image_webp: string;
   activo: boolean; precio_oferta: number | null; oferta_hasta: string | null;
 };
 const empty: ProductoForm = {
   nombre: "", descripcion: "", categoria: "", grupo: "", sku: "", precio: 0, stock: 0,
+  codigo_fabricante: "", precio_vta_sin_iva: null,
   image_url: "", image_webp: "", activo: true, precio_oferta: null, oferta_hasta: null,
 };
 
@@ -31,6 +34,7 @@ function AdminProductos() {
   const upsert = useServerFn(adminUpsertProducto);
   const del = useServerFn(adminDeleteProducto);
   const bulk = useServerFn(adminBulkProductos);
+  const importErp = useServerFn(adminImportProductosErp);
   const listCategorias = useServerFn(adminListCategorias);
   const listGrupos = useServerFn(adminListGrupos);
 
@@ -43,6 +47,7 @@ function AdminProductos() {
   // Persistente entre paginación / búsqueda / filtros
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkOpen, setBulkOpen] = useState<null | BulkKind>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["admin-productos", q, page, cat, grupo, activo],
@@ -84,6 +89,8 @@ function AdminProductos() {
       image_webp: v.image_webp || null,
       precio: Number(v.precio),
       stock: Number(v.stock),
+      codigo_fabricante: v.codigo_fabricante || null,
+      precio_vta_sin_iva: v.precio_vta_sin_iva != null ? Number(v.precio_vta_sin_iva) : null,
       precio_oferta: v.precio_oferta != null && v.precio_oferta > 0 ? Number(v.precio_oferta) : null,
       oferta_hasta: v.oferta_hasta || null,
     } });
@@ -121,6 +128,13 @@ function AdminProductos() {
     }
   }
 
+  async function importRows(rows: ErpImportRow[]) {
+    const res = await importErp({ data: { rows } });
+    toast.success(`ERP importado: ${res.updated} actualizados, ${res.created} nuevos`);
+    setImportOpen(false);
+    qc.invalidateQueries({ queryKey: ["admin-productos"] });
+  }
+
   return (
     <div className="pb-32">
       <div className="flex gap-3 mb-4 flex-wrap">
@@ -148,6 +162,9 @@ function AdminProductos() {
         </select>
         <button onClick={() => setEditing({ ...empty })} className="bg-primary text-primary-foreground px-4 py-2 text-sm font-medium flex items-center gap-2">
           <Plus className="size-4" /> Nuevo
+        </button>
+        <button onClick={() => setImportOpen(true)} className="border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary">
+          <Upload className="size-4" /> Importar ERP
         </button>
       </div>
 
@@ -212,6 +229,7 @@ function AdminProductos() {
                     <button onClick={() => setEditing({
                       id: p.id, nombre: p.nombre ?? "", descripcion: p.descripcion ?? "", categoria: p.categoria ?? "",
                       grupo: p.grupo ?? "", sku: p.sku ?? "", precio: Number(p.precio ?? 0), stock: p.stock ?? 0,
+                      codigo_fabricante: p.codigo_fabricante ?? "", precio_vta_sin_iva: p.precio_vta_sin_iva != null ? Number(p.precio_vta_sin_iva) : null,
                       image_url: p.image_url ?? "", image_webp: p.image_webp ?? "",
                       activo: p.activo !== false,
                       precio_oferta: p.precio_oferta != null ? Number(p.precio_oferta) : null,
@@ -268,6 +286,7 @@ function AdminProductos() {
       )}
 
       {editing && <ProductoModal value={editing} categorias={categorias ?? []} grupos={grupos ?? []} onClose={() => setEditing(null)} onSave={save} />}
+      {importOpen && <ErpImportModal onClose={() => setImportOpen(false)} onImport={importRows} />}
     </div>
   );
 }
@@ -280,6 +299,90 @@ function BulkBtn({ icon, label, onClick, danger }: { icon: React.ReactNode; labe
     >
       {icon} {label}
     </button>
+  );
+}
+
+function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: (rows: ErpImportRow[]) => Promise<void> }) {
+  const [rows, setRows] = useState<ErpImportRow[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [fileName, setFileName] = useState("");
+
+  async function loadFile(file: File | null) {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const parsed = await parseErpExcelFile(file);
+      setRows(parsed);
+      setFileName(file.name);
+      if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "No pude leer el Excel");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function apply() {
+    if (!rows.length) return;
+    setBusy(true);
+    try {
+      await onImport(rows);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-background border border-border max-w-3xl w-full p-6">
+        <h2 className="font-display text-xl mb-1">Importar productos del ERP</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Actualiza SKU, nombre, código fabricante y precios. No toca categorías, grupos, stock ecommerce, imágenes, descripción, estado ni ofertas.
+        </p>
+        <label className="block border border-dashed border-border p-6 text-center cursor-pointer hover:border-primary">
+          <Upload className="size-5 mx-auto mb-2 text-muted-foreground" />
+          <span className="text-sm font-medium">{fileName || "Elegir Excel .xlsx"}</span>
+          <input type="file" accept=".xlsx,.xls" className="sr-only" onChange={(e) => loadFile(e.target.files?.[0] ?? null)} />
+        </label>
+
+        {rows.length > 0 && (
+          <div className="mt-4 border border-border max-h-72 overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-secondary sticky top-0">
+                <tr>
+                  <th className="text-left px-3 py-2">SKU</th>
+                  <th className="text-left px-3 py-2">Nombre</th>
+                  <th className="text-left px-3 py-2">Cód. fabricante</th>
+                  <th className="text-right px-3 py-2">Sin IVA</th>
+                  <th className="text-right px-3 py-2">Venta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 100).map((row) => (
+                  <tr key={row.sku} className="border-t border-border">
+                    <td className="px-3 py-2">{row.sku}</td>
+                    <td className="px-3 py-2">{row.nombre}</td>
+                    <td className="px-3 py-2">{row.codigo_fabricante}</td>
+                    <td className="px-3 py-2 text-right">{row.precio_vta_sin_iva != null ? formatARS(row.precio_vta_sin_iva) : "-"}</td>
+                    <td className="px-3 py-2 text-right">{formatARS(row.precio)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 mt-5">
+          <span className="text-xs text-muted-foreground">{rows.length ? `${rows.length} filas listas para importar` : "Esperando archivo"}</span>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-4 py-2 text-sm">Cancelar</button>
+            <button disabled={busy || rows.length === 0} onClick={apply} className="bg-primary text-primary-foreground px-5 py-2 text-sm font-medium disabled:opacity-50">
+              {busy ? "Procesando..." : "Aplicar importación"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -458,6 +561,7 @@ function ProductoModal({ value, categorias, grupos, onClose, onSave }: {
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Nombre" className="sm:col-span-2" value={v.nombre} onChange={(x) => setV({ ...v, nombre: x })} required />
             <Field label="SKU" value={v.sku} onChange={(x) => setV({ ...v, sku: x })} />
+            <Field label="Código fabricante" value={v.codigo_fabricante} onChange={(x) => setV({ ...v, codigo_fabricante: x })} />
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Categoría</span>
               <input list="cats-edit" value={v.categoria} onChange={(e) => setV({ ...v, categoria: e.target.value })} className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
@@ -469,6 +573,7 @@ function ProductoModal({ value, categorias, grupos, onClose, onSave }: {
               <datalist id="grupos-edit">{grupos.map((g) => <option key={g} value={g} />)}</datalist>
             </label>
             <Field label="Precio (ARS)" type="number" value={String(v.precio)} onChange={(x) => setV({ ...v, precio: Number(x) })} required />
+            <Field label="Precio sin IVA" type="number" value={v.precio_vta_sin_iva != null ? String(v.precio_vta_sin_iva) : ""} onChange={(x) => setV({ ...v, precio_vta_sin_iva: x === "" ? null : Number(x) })} />
             <Field label="Stock" type="number" value={String(v.stock)} onChange={(x) => setV({ ...v, stock: Number(x) })} required />
             <label className="block sm:col-span-2">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Descripción</span>

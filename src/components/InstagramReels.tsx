@@ -55,7 +55,7 @@ export function InstagramReels() {
 
     if (sectionRef.current) observer.observe(sectionRef.current);
 
-    return () => observer.disconnect();
+    return () => observer.disconnect();a
   }, []);
 
   const handlePrev = () => {
