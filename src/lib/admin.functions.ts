@@ -246,6 +246,52 @@ export const adminImportProductosErp = createServerFn({ method: "POST" })
     return { ok: true, importId, processed: data.rows.length, created, updated };
   });
 
+export const adminPreviewImportProductosErp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    rows: z.array(erpImportRowSchema).min(1).max(5000),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const skus = data.rows.map((row) => row.sku);
+    const { data: existing, error } = await context.supabase
+      .from("productos")
+      .select("id, sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio")
+      .in("sku", skus);
+    if (error) throw new Error(error.message);
+
+    const bySku = new Map((existing ?? []).map((row: any) => [row.sku, row]));
+    const created: typeof data.rows = [];
+    const updated: Array<{ row: typeof data.rows[number]; current: any; changes: Array<{ field: string; before: any; after: any }> }> = [];
+    let unchanged = 0;
+
+    function sameNumber(a: unknown, b: unknown) {
+      if (a == null && b == null) return true;
+      const na = Number(a);
+      const nb = Number(b);
+      return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.001;
+    }
+
+    for (const row of data.rows) {
+      const current = bySku.get(row.sku);
+      if (!current) {
+        created.push(row);
+        continue;
+      }
+      const changes = [
+        { field: "nombre", before: current.nombre, after: row.nombre, same: String(current.nombre ?? "") === row.nombre },
+        { field: "codigo_fabricante", before: current.codigo_fabricante, after: row.codigo_fabricante, same: String(current.codigo_fabricante ?? "") === String(row.codigo_fabricante ?? "") },
+        { field: "precio_vta_sin_iva", before: current.precio_vta_sin_iva, after: row.precio_vta_sin_iva, same: sameNumber(current.precio_vta_sin_iva, row.precio_vta_sin_iva) },
+        { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
+      ].filter((change) => !change.same).map(({ same, ...change }) => change);
+
+      if (changes.length) updated.push({ row, current, changes });
+      else unchanged++;
+    }
+
+    return { created, updated, unchanged };
+  });
+
 // === PRODUCT IMAGES (galería) ===
 
 export const adminListProductImages = createServerFn({ method: "GET" })

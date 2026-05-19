@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload } from "lucide-react";
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
-  adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp,
+  adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp, adminPreviewImportProductosErp,
 } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
@@ -35,6 +35,7 @@ function AdminProductos() {
   const del = useServerFn(adminDeleteProducto);
   const bulk = useServerFn(adminBulkProductos);
   const importErp = useServerFn(adminImportProductosErp);
+  const previewImportErp = useServerFn(adminPreviewImportProductosErp);
   const listCategorias = useServerFn(adminListCategorias);
   const listGrupos = useServerFn(adminListGrupos);
 
@@ -286,7 +287,7 @@ function AdminProductos() {
       )}
 
       {editing && <ProductoModal value={editing} categorias={categorias ?? []} grupos={grupos ?? []} onClose={() => setEditing(null)} onSave={save} />}
-      {importOpen && <ErpImportModal onClose={() => setImportOpen(false)} onImport={importRows} />}
+      {importOpen && <ErpImportModal onClose={() => setImportOpen(false)} onImport={importRows} onPreview={(rows) => previewImportErp({ data: { rows } })} />}
     </div>
   );
 }
@@ -302,8 +303,20 @@ function BulkBtn({ icon, label, onClick, danger }: { icon: React.ReactNode; labe
   );
 }
 
-function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: (rows: ErpImportRow[]) => Promise<void> }) {
+type ImportPreview = {
+  created: ErpImportRow[];
+  updated: Array<{ row: ErpImportRow; changes: Array<{ field: string; before: unknown; after: unknown }> }>;
+  unchanged: number;
+};
+
+function ErpImportModal({ onClose, onImport, onPreview }: {
+  onClose: () => void;
+  onImport: (rows: ErpImportRow[]) => Promise<void>;
+  onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>;
+}) {
   const [rows, setRows] = useState<ErpImportRow[]>([]);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [tab, setTab] = useState<"created" | "updated">("created");
   const [busy, setBusy] = useState(false);
   const [fileName, setFileName] = useState("");
 
@@ -315,6 +328,7 @@ function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: 
       setRows(parsed);
       setFileName(file.name);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
+      else setPreview(await onPreview(parsed));
     } catch (e: any) {
       toast.error(e?.message ?? "No pude leer el Excel");
     } finally {
@@ -334,7 +348,7 @@ function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: 
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-background border border-border max-w-3xl w-full p-6">
+      <div onClick={(e) => e.stopPropagation()} className="bg-background text-foreground border border-border max-w-5xl w-full p-6">
         <h2 className="font-display text-xl mb-1">Importar productos del ERP</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Actualiza SKU, nombre, código fabricante y precios. No toca categorías, grupos, stock ecommerce, imágenes, descripción, estado ni ofertas.
@@ -345,30 +359,18 @@ function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: 
           <input type="file" accept=".xlsx,.xls,.csv,text/csv" className="sr-only" onChange={(e) => loadFile(e.target.files?.[0] ?? null)} />
         </label>
 
-        {rows.length > 0 && (
-          <div className="mt-4 border border-border max-h-72 overflow-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-secondary sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2">SKU</th>
-                  <th className="text-left px-3 py-2">Nombre</th>
-                  <th className="text-left px-3 py-2">Cód. fabricante</th>
-                  <th className="text-right px-3 py-2">Sin IVA</th>
-                  <th className="text-right px-3 py-2">Venta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, 100).map((row) => (
-                  <tr key={row.sku} className="border-t border-border">
-                    <td className="px-3 py-2">{row.sku}</td>
-                    <td className="px-3 py-2">{row.nombre}</td>
-                    <td className="px-3 py-2">{row.codigo_fabricante}</td>
-                    <td className="px-3 py-2 text-right">{row.precio_vta_sin_iva != null ? formatARS(row.precio_vta_sin_iva) : "-"}</td>
-                    <td className="px-3 py-2 text-right">{formatARS(row.precio)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {preview && (
+          <div className="mt-4">
+            <div className="grid grid-cols-3 gap-2 mb-3 text-sm">
+              <div className="border border-border px-3 py-2 text-foreground"><strong>{preview.created.length}</strong> nuevos</div>
+              <div className="border border-border px-3 py-2 text-foreground"><strong>{preview.updated.length}</strong> modificados</div>
+              <div className="border border-border px-3 py-2 text-muted-foreground"><strong>{preview.unchanged}</strong> sin cambios</div>
+            </div>
+            <div className="flex gap-2 mb-2 text-sm">
+              <button onClick={() => setTab("created")} className={`px-3 py-1.5 border ${tab === "created" ? "border-primary text-foreground" : "border-border text-muted-foreground"}`}>Nuevos</button>
+              <button onClick={() => setTab("updated")} className={`px-3 py-1.5 border ${tab === "updated" ? "border-primary text-foreground" : "border-border text-muted-foreground"}`}>Modificados</button>
+            </div>
+            {tab === "created" ? <CreatedRowsTable rows={preview.created} /> : <UpdatedRowsTable rows={preview.updated} />}
           </div>
         )}
 
@@ -384,6 +386,91 @@ function ErpImportModal({ onClose, onImport }: { onClose: () => void; onImport: 
       </div>
     </div>
   );
+}
+
+function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
+  if (!rows.length) return <div className="border border-border p-6 text-sm text-muted-foreground">No hay productos nuevos en este archivo.</div>;
+  return (
+    <div className="border border-border max-h-72 overflow-auto">
+      <table className="w-full text-xs text-foreground">
+        <thead className="bg-secondary text-secondary-foreground sticky top-0">
+          <tr>
+            <th className="text-left px-3 py-2">SKU</th>
+            <th className="text-left px-3 py-2">Nombre</th>
+            <th className="text-left px-3 py-2">Cód. fabricante</th>
+            <th className="text-right px-3 py-2">Sin IVA</th>
+            <th className="text-right px-3 py-2">Venta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(0, 100).map((row) => (
+            <tr key={row.sku} className="border-t border-border">
+              <td className="px-3 py-2 font-medium">{row.sku}</td>
+              <td className="px-3 py-2">{row.nombre}</td>
+              <td className="px-3 py-2 text-muted-foreground">{row.codigo_fabricante ?? "-"}</td>
+              <td className="px-3 py-2 text-right">{row.precio_vta_sin_iva != null ? formatARS(row.precio_vta_sin_iva) : "-"}</td>
+              <td className="px-3 py-2 text-right">{formatARS(row.precio)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function UpdatedRowsTable({ rows }: { rows: Array<{ row: ErpImportRow; changes: Array<{ field: string; before: unknown; after: unknown }> }> }) {
+  if (!rows.length) return <div className="border border-border p-6 text-sm text-muted-foreground">No hay productos modificados en este archivo.</div>;
+  return (
+    <div className="border border-border max-h-72 overflow-auto">
+      <table className="w-full text-xs text-foreground">
+        <thead className="bg-secondary text-secondary-foreground sticky top-0">
+          <tr>
+            <th className="text-left px-3 py-2">SKU</th>
+            <th className="text-left px-3 py-2">Producto</th>
+            <th className="text-left px-3 py-2">Cambios detectados</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(0, 100).map(({ row, changes }) => (
+            <tr key={row.sku} className="border-t border-border align-top">
+              <td className="px-3 py-2 font-medium">{row.sku}</td>
+              <td className="px-3 py-2">{row.nombre}</td>
+              <td className="px-3 py-2">
+                <div className="space-y-1">
+                  {changes.map((change) => (
+                    <div key={change.field} className="grid grid-cols-[130px_1fr] gap-2">
+                      <span className="text-muted-foreground">{fieldLabel(change.field)}</span>
+                      <span>
+                        <span className="line-through text-muted-foreground">{formatImportValue(change.field, change.before)}</span>
+                        <span className="mx-1 text-muted-foreground">→</span>
+                        <span className="font-medium text-foreground">{formatImportValue(change.field, change.after)}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function fieldLabel(field: string) {
+  const labels: Record<string, string> = {
+    nombre: "Nombre",
+    codigo_fabricante: "Cód. fabricante",
+    precio_vta_sin_iva: "Precio sin IVA",
+    precio: "Precio venta",
+  };
+  return labels[field] ?? field;
+}
+
+function formatImportValue(field: string, value: unknown) {
+  if (value == null || value === "") return "-";
+  if (field === "precio" || field === "precio_vta_sin_iva") return formatARS(Number(value));
+  return String(value);
 }
 
 // === BULK DIALOG ===
