@@ -153,6 +153,7 @@ export function ProductGalleryAdmin({ productoId }: Props) {
 
       {queue.length > 0 && (
         <ImageCropper
+          key={queue[0].src}
           src={queue[0].src}
           aspect={1}
           onCancel={() => setQueue((q) => q.slice(1))}

@@ -13,7 +13,7 @@ type Props = {
   /** WebP quality 0..1, default 0.85. */
   quality?: number;
   onCancel: () => void;
-  onConfirm: (blob: Blob, ext: "webp" | "jpeg") => void;
+  onConfirm: (blob: Blob, ext: "webp" | "jpeg") => void | Promise<void>;
 };
 
 /**
@@ -35,9 +35,10 @@ export function ImageCropper({ src, aspect = 1, maxSize = 1200, quality = 0.85, 
     setBusy(true);
     try {
       const { blob, ext } = await renderCroppedBlob(src, area, maxSize, quality);
-      onConfirm(blob, ext);
+      await onConfirm(blob, ext);
     } catch (e) {
       console.error(e);
+    } finally {
       setBusy(false);
     }
   }

@@ -80,20 +80,19 @@ function AdminProductos() {
   function clearSelection() { setSelected(new Set()); }
 
   async function save(v: ProductoForm) {
+    const { image_url: _imageUrl, image_webp: _imageWebp, ...producto } = v;
     const res = await upsert({ data: {
-      ...v,
-      descripcion: v.descripcion || null,
-      categoria: v.categoria || null,
-      grupo: v.grupo || null,
-      sku: v.sku || null,
-      image_url: v.image_url || null,
-      image_webp: v.image_webp || null,
-      precio: Number(v.precio),
-      stock: Number(v.stock),
-      codigo_fabricante: v.codigo_fabricante || null,
-      precio_vta_sin_iva: v.precio_vta_sin_iva != null ? Number(v.precio_vta_sin_iva) : null,
-      precio_oferta: v.precio_oferta != null && v.precio_oferta > 0 ? Number(v.precio_oferta) : null,
-      oferta_hasta: v.oferta_hasta || null,
+      ...producto,
+      descripcion: producto.descripcion || null,
+      categoria: producto.categoria || null,
+      grupo: producto.grupo || null,
+      sku: producto.sku || null,
+      precio: Number(producto.precio),
+      stock: Number(producto.stock),
+      codigo_fabricante: producto.codigo_fabricante || null,
+      precio_vta_sin_iva: producto.precio_vta_sin_iva != null ? Number(producto.precio_vta_sin_iva) : null,
+      precio_oferta: producto.precio_oferta != null && producto.precio_oferta > 0 ? Number(producto.precio_oferta) : null,
+      oferta_hasta: producto.oferta_hasta || null,
     } });
     toast.success("Producto guardado");
     // Si era nuevo, dejamos abierto para subir imágenes
