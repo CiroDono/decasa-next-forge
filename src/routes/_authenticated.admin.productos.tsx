@@ -170,12 +170,14 @@ function AdminProductos() {
             className="w-full pl-9 pr-3 py-2 border border-border bg-background outline-none focus:border-primary text-sm"
           />
         </div>
-        <select value={cat} onChange={(e) => { setCat(e.target.value); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
-          <option value="">Todas los grupos</option>
-          {categorias?.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
         <SearchSelect
-          placeholder="Buscar grupo.."
+          placeholder="Buscar categoría..."
+          options={categorias ?? []}
+          value={cat}
+          onChange={(c) => { setCat(c); setPage(1); }}
+        />
+        <SearchSelect
+          placeholder="Buscar Grupos..."
           options={grupos ?? []}
           value={grupo}
           onChange={(g) => { setGrupo(g); setPage(1); }}
@@ -957,35 +959,49 @@ function SearchSelect({ placeholder, options, value, onChange }: { placeholder: 
     setOpen(false);
   };
 
+  const displayValue = value ? `✓ ${value}` : "";
+
   return (
     <div className="relative" ref={containerRef}>
       <div className="relative">
         <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
           type="text"
-          placeholder={placeholder}
-          value={search || (value ? `✓ ${value}` : "")}
+          placeholder={displayValue || placeholder}
+          value={search}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           className="w-full pl-9 pr-8 py-2 border border-border bg-background text-sm outline-none focus:border-primary"
         />
-        <ChevronDown className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <ChevronDown className={`size-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${open ? "rotate-180" : ""}`} />
       </div>
-      {open && (
+      {open && options && options.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 border border-border bg-background shadow-lg max-h-48 overflow-y-auto z-10">
           {filtered.length > 0 ? (
-            filtered.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleSelect(option)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${value === option ? "bg-primary/10 text-primary font-medium" : ""}`}
-              >
-                {value === option && <span className="mr-2">✓</span>}
-                {option}
-              </button>
-            ))
+            <>
+              {!search && (
+                <button
+                  type="button"
+                  onClick={() => { onChange(""); setSearch(""); setOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${!value ? "bg-primary/10 text-primary font-medium" : ""}`}
+                >
+                  {!value && <span className="mr-2">✓</span>}
+                  Todas
+                </button>
+              )}
+              {filtered.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleSelect(option)}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${value === option ? "bg-primary/10 text-primary font-medium" : ""}`}
+                >
+                  {value === option && <span className="mr-2">✓</span>}
+                  {option}
+                </button>
+              ))}
+            </>
           ) : (
             <div className="px-3 py-2 text-xs text-muted-foreground">No encontradas</div>
           )}
