@@ -108,11 +108,11 @@ export function ProductGalleryAdmin({ productoId }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Galería · {items.length} {items.length === 1 ? "imagen" : "imágenes"}
         </div>
-        <label className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs cursor-pointer hover:border-primary">
+        <label className="inline-flex w-full items-center justify-center gap-1.5 border border-border px-3 py-2 text-xs cursor-pointer hover:border-primary sm:w-auto sm:py-1.5">
           <Plus className="size-3.5" /> Subir imágenes
           <input
             type="file"
@@ -133,7 +133,7 @@ export function ProductGalleryAdmin({ productoId }: Props) {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {items.map((it, i) => (
               <SortableThumb
                 key={it.id}
@@ -184,16 +184,16 @@ function SortableThumb({ item, isPrincipal, onDelete, onEdit }: {
       <button
         {...attributes}
         {...listeners}
-        className="absolute top-1 right-1 size-6 grid place-items-center bg-background/90 border border-border opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+        className="absolute top-1 right-1 size-7 sm:size-6 grid place-items-center bg-background/90 border border-border opacity-100 sm:opacity-0 sm:group-hover:opacity-100 cursor-grab active:cursor-grabbing"
         aria-label="Reordenar"
       >
         <GripVertical className="size-3.5" />
       </button>
-      <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100">
-        <button onClick={onEdit} className="size-6 grid place-items-center bg-background/90 border border-border hover:text-primary" aria-label="Editar recorte">
+      <div className="absolute bottom-1 right-1 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+        <button onClick={onEdit} className="size-7 sm:size-6 grid place-items-center bg-background/90 border border-border hover:text-primary" aria-label="Editar recorte">
           <Edit3 className="size-3" />
         </button>
-        <button onClick={onDelete} className="size-6 grid place-items-center bg-background/90 border border-border hover:text-destructive" aria-label="Eliminar">
+        <button onClick={onDelete} className="size-7 sm:size-6 grid place-items-center bg-background/90 border border-border hover:text-destructive" aria-label="Eliminar">
           <Trash2 className="size-3" />
         </button>
       </div>

@@ -160,8 +160,8 @@ function AdminProductos() {
 
   return (
     <div className="pb-32">
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <div className="flex-1 min-w-[200px] relative">
+      <div className="grid gap-2 mb-4 sm:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_180px_180px_170px_auto_auto] lg:items-center">
+        <div className="relative sm:col-span-2 lg:col-span-1">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             placeholder="Buscar por nombre, SKU o código fabricante..."
@@ -170,29 +170,29 @@ function AdminProductos() {
             className="w-full pl-9 pr-3 py-2 border border-border bg-background outline-none focus:border-primary text-sm"
           />
         </div>
-        <select value={cat} onChange={(e) => { setCat(e.target.value); setPage(1); }} className="border border-border bg-background px-3 py-2 text-sm">
+        <select value={cat} onChange={(e) => { setCat(e.target.value); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
           <option value="">Todas las categorías</option>
           {categorias?.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={grupo} onChange={(e) => { setGrupo(e.target.value); setPage(1); }} className="border border-border bg-background px-3 py-2 text-sm">
+        <select value={grupo} onChange={(e) => { setGrupo(e.target.value); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
           <option value="">Todas las marcas</option>
           {grupos?.map((g) => <option key={g} value={g}>{g}</option>)}
         </select>
-        <select value={activo} onChange={(e) => { setActivo(e.target.value as any); setPage(1); }} className="border border-border bg-background px-3 py-2 text-sm">
+        <select value={activo} onChange={(e) => { setActivo(e.target.value as any); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
           <option value="all">Activos e inactivos</option>
           <option value="yes">Solo activos</option>
           <option value="no">Solo inactivos</option>
         </select>
-        <button onClick={() => setEditing({ ...empty })} className="bg-primary text-primary-foreground px-4 py-2 text-sm font-medium flex items-center gap-2">
+        <button onClick={() => setEditing({ ...empty })} className="w-full justify-center bg-primary text-primary-foreground px-4 py-2 text-sm font-medium flex items-center gap-2">
           <Plus className="size-4" /> Nuevo
         </button>
-        <button onClick={() => setImportOpen(true)} className="border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary">
+        <button onClick={() => setImportOpen(true)} className="w-full justify-center border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary">
           <Upload className="size-4" /> Importar ERP
         </button>
       </div>
 
-      <div className="border border-border overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="hidden border border-border overflow-x-auto lg:block">
+        <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-secondary text-secondary-foreground">
             <tr>
               <th className="px-3 py-2 w-10">
@@ -275,10 +275,36 @@ function AdminProductos() {
         </table>
       </div>
 
+      <div className="grid gap-3 lg:hidden">
+        {data?.rows.map((p: any) => {
+          const isSel = selected.has(p.id);
+          const enOferta = p.precio_oferta && Number(p.precio_oferta) > 0 && (!p.oferta_hasta || new Date(p.oferta_hasta) > new Date());
+          return (
+            <ProductAdminCard
+              key={p.id}
+              product={p}
+              selected={isSel}
+              enOferta={Boolean(enOferta)}
+              onToggle={() => toggleOne(p.id)}
+              onEdit={() => setEditing({
+                id: p.id, nombre: p.nombre ?? "", descripcion: p.descripcion ?? "", categoria: p.categoria ?? "",
+                grupo: p.grupo ?? "", sku: p.sku ?? "", precio: Number(p.precio ?? 0), stock: p.stock ?? 0,
+                codigo_fabricante: p.codigo_fabricante ?? "", precio_vta_sin_iva: p.precio_vta_sin_iva != null ? Number(p.precio_vta_sin_iva) : null,
+                image_url: p.image_url ?? "", image_webp: p.image_webp ?? "",
+                activo: p.activo !== false,
+                precio_oferta: p.precio_oferta != null ? Number(p.precio_oferta) : null,
+                oferta_hasta: p.oferta_hasta ?? null,
+              })}
+              onDelete={() => remove(p.id)}
+            />
+          );
+        })}
+      </div>
+
       {data && data.count > data.pageSize && (
-        <div className="flex justify-between items-center mt-4 text-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mt-4 text-sm">
           <span className="text-muted-foreground">{data.count} productos · {selected.size} seleccionados</span>
-          <div className="flex gap-2">
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
             <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-3 py-1 border border-border disabled:opacity-30">Anterior</button>
             <span className="px-3 py-1">Pág {page}</span>
             <button disabled={page * data.pageSize >= data.count} onClick={() => setPage(page + 1)} className="px-3 py-1 border border-border disabled:opacity-30">Siguiente</button>
@@ -288,7 +314,7 @@ function AdminProductos() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-foreground text-background border border-foreground shadow-lg flex items-center gap-1 px-3 py-2 max-w-[95vw] overflow-x-auto">
+        <div className="fixed inset-x-2 bottom-3 z-40 bg-foreground text-background border border-foreground shadow-lg flex items-center gap-1 px-3 py-2 overflow-x-auto sm:inset-x-auto sm:left-1/2 sm:max-w-[95vw] sm:-translate-x-1/2">
           <span className="text-xs font-semibold pr-2 border-r border-background/30 mr-1 whitespace-nowrap">
             {selected.size} seleccionado{selected.size === 1 ? "" : "s"}
           </span>
@@ -351,6 +377,65 @@ function SortHeader({ label, active, dir, onClick, align = "left" }: {
       <span>{label}</span>
       <Icon className="size-3.5" />
     </button>
+  );
+}
+
+function ProductAdminCard({ product: p, selected, enOferta, onToggle, onEdit, onDelete }: {
+  product: any;
+  selected: boolean;
+  enOferta: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <article className={`border border-border bg-surface-elevated p-3 ${selected ? "ring-1 ring-primary bg-accent/30" : ""}`}>
+      <div className="flex gap-3">
+        <label className="pt-1">
+          <input type="checkbox" checked={selected} onChange={onToggle} aria-label={`Seleccionar ${p.nombre}`} />
+        </label>
+        <div className="size-16 shrink-0 bg-muted overflow-hidden">
+          <ProductImage webp={p.image_webp} src={p.image_url} alt={p.nombre ?? ""} className="size-full" iconClassName="size-6" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-medium text-sm leading-snug line-clamp-2">
+              {p.nombre}
+              {enOferta && <BadgePercent className="inline-block size-3.5 ml-1.5 text-primary" />}
+            </h3>
+            <span className={`shrink-0 text-[10px] uppercase px-2 py-0.5 ${p.activo === false ? "bg-muted text-muted-foreground" : "bg-success/15 text-success"}`}>
+              {p.activo === false ? "Inactivo" : "Activo"}
+            </span>
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+            <div>
+              <dt className="text-muted-foreground">SKU</dt>
+              <dd className="truncate">{p.sku || "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Cod. fab.</dt>
+              <dd className="truncate">{p.codigo_fabricante || "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Precio</dt>
+              <dd className="font-medium">{formatARS(Number(enOferta ? p.precio_oferta : p.precio ?? 0))}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Stock</dt>
+              <dd className={(p.stock ?? 0) <= 5 ? "font-medium text-warning" : "font-medium"}>{p.stock ?? 0}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+      <div className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
+        <button onClick={onEdit} className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-medium hover:border-primary hover:text-primary">
+          <Edit className="size-3.5" /> Editar
+        </button>
+        <button onClick={onDelete} className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-medium hover:border-destructive hover:text-destructive">
+          <Trash2 className="size-3.5" /> Eliminar
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -420,8 +505,8 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-background text-foreground border border-border max-w-5xl w-full p-6">
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-end sm:place-items-center p-2 sm:p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-background text-foreground border border-border max-w-5xl w-full max-h-[92vh] overflow-auto p-4 sm:p-6">
         <h2 className="font-display text-xl mb-1">Importar productos del ERP</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Actualiza SKU, nombre, código fabricante y precios. No toca categorías, grupos, stock ecommerce, imágenes, descripción, estado ni ofertas.
@@ -665,8 +750,8 @@ function BulkDialog({ kind, count, categorias, grupos, onClose, onConfirm }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-background border border-border max-w-md w-full p-6">
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-end sm:place-items-center p-2 sm:p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-background border border-border max-w-md w-full max-h-[92vh] overflow-auto p-4 sm:p-6">
         <h3 className="font-display text-lg mb-1">{titles[kind]}</h3>
         <p className="text-xs text-muted-foreground mb-4">Se aplicará a <strong>{count}</strong> producto{count === 1 ? "" : "s"} seleccionado{count === 1 ? "" : "s"}.</p>
 
@@ -756,11 +841,11 @@ function ProductoModal({ value, categorias, grupos, onClose, onSave }: {
   const [tab, setTab] = useState<"info" | "galeria" | "oferta">("info");
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4 overflow-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 grid place-items-end sm:place-items-center p-2 sm:p-4 overflow-auto" onClick={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={async (e) => { e.preventDefault(); setBusy(true); try { await onSave(v); } finally { setBusy(false); } }}
-        className="bg-background border border-border max-w-3xl w-full p-6 my-8"
+        className="bg-background border border-border max-w-3xl w-full max-h-[92vh] overflow-auto p-4 sm:p-6 sm:my-8"
       >
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-display text-xl">{v.id ? "Editar producto" : "Nuevo producto"}</h2>

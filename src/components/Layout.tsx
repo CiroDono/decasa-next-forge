@@ -20,17 +20,17 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <div className="bg-secondary text-secondary-foreground text-xs">
-        <div className="container-x flex items-center justify-between py-2">
-          <span className="flex items-center gap-2">
+        <div className="container-x flex items-center justify-center sm:justify-between py-2 text-center sm:text-left">
+          <span className="inline-flex items-center gap-2">
             <MapPin className="size-3.5" /> La Falda, Córdoba — Envíos a todo el país
           </span>
         </div>
       </div>
 
       <header className="sticky top-0 z-40 border-b border-border bg-surface-elevated/90 backdrop-blur">
-        <div className="container-x flex items-center gap-4 py-4">
+        <div className="container-x grid grid-cols-[auto_1fr_auto] items-center gap-2 py-3 sm:flex sm:gap-4 sm:py-4">
           <Link to="/" className="shrink-0" >
-              <img src="/logo.png" alt="Decasan" className="h-20 w-auto" />
+              <img src="/logo.png" alt="Decasan" className="h-14 w-auto sm:h-20" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
@@ -42,10 +42,11 @@ export function Layout({ children }: { children: ReactNode }) {
             )}
           </nav>
 
-          <div className="flex-1 flex justify-center px-2">
+          <div className="order-last col-span-3 mt-2 flex justify-center sm:order-none sm:col-span-1 sm:mt-0 sm:flex-1 sm:px-2">
             <HeaderSearch />
           </div>
 
+          <div className="flex items-center justify-end gap-0.5 sm:contents">
           {user ? (
             <>
               <Link to="/cuenta" className="p-2 hover:text-primary" aria-label="Mi cuenta">
@@ -68,6 +69,7 @@ export function Layout({ children }: { children: ReactNode }) {
               </span>
             )}
           </Link>
+          </div>
         </div>
       </header>
 

@@ -19,14 +19,14 @@ function AdminPedidos() {
     <div className="space-y-3">
       {data?.length === 0 && <p className="text-muted-foreground text-sm">Aún no hay pedidos.</p>}
       {data?.map((p) => (
-        <details key={p.id} className="border border-border">
-          <summary className="px-4 py-3 cursor-pointer flex flex-wrap items-center gap-3 justify-between">
-            <div>
+        <details key={p.id} className="border border-border bg-surface-elevated">
+          <summary className="px-3 py-3 sm:px-4 cursor-pointer grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <div className="font-mono text-xs text-muted-foreground">#{p.id.slice(0, 8)}</div>
               <div className="text-sm font-medium">{p.nombre} <span className="text-muted-foreground">— {p.email}</span></div>
               <div className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString("es-AR")}</div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
               <select
                 value={p.estado}
                 onClick={(e) => e.stopPropagation()}
@@ -35,14 +35,14 @@ function AdminPedidos() {
                   toast.success("Estado actualizado");
                   qc.invalidateQueries({ queryKey: ["admin-pedidos"] });
                 }}
-                className="border border-border bg-background px-2 py-1 text-xs"
+                className="min-w-0 border border-border bg-background px-2 py-1.5 text-xs"
               >
                 {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-              <span className="font-display">{formatARS(Number(p.total))}</span>
+              <span className="font-display whitespace-nowrap">{formatARS(Number(p.total))}</span>
             </div>
           </summary>
-          <div className="px-4 py-3 border-t border-border bg-secondary/30 text-sm">
+          <div className="px-3 py-3 sm:px-4 border-t border-border bg-secondary/30 text-sm space-y-1">
             <p><strong>Tel:</strong> {p.telefono}</p>
             {p.direccion && (
               <p><strong>Envío:</strong> {(p.direccion as any).calle} {(p.direccion as any).numero}, {(p.direccion as any).ciudad}, {(p.direccion as any).provincia} (CP {(p.direccion as any).codigo_postal})</p>
