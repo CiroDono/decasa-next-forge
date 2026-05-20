@@ -175,7 +175,7 @@ function AdminProductos() {
           {categorias?.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <SearchSelect
-          placeholder="Buscar marca..."
+          placeholder="Buscar grupo.."
           options={grupos ?? []}
           value={grupo}
           onChange={(g) => { setGrupo(g); setPage(1); }}
