@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
   adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp, adminPreviewImportProductosErp,
@@ -171,13 +171,15 @@ function AdminProductos() {
           />
         </div>
         <select value={cat} onChange={(e) => { setCat(e.target.value); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
-          <option value="">Todas las categorías</option>
+          <option value="">Todas los grupos</option>
           {categorias?.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={grupo} onChange={(e) => { setGrupo(e.target.value); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
-          <option value="">Todas las marcas</option>
-          {grupos?.map((g) => <option key={g} value={g}>{g}</option>)}
-        </select>
+        <SearchSelect
+          placeholder="Buscar marca..."
+          options={grupos ?? []}
+          value={grupo}
+          onChange={(g) => { setGrupo(g); setPage(1); }}
+        />
         <select value={activo} onChange={(e) => { setActivo(e.target.value as any); setPage(1); }} className="w-full border border-border bg-background px-3 py-2 text-sm">
           <option value="all">Activos e inactivos</option>
           <option value="yes">Solo activos</option>
@@ -937,5 +939,58 @@ function Field({ label, value, onChange, required, type, className }: { label: s
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       <input type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} required={required} className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
     </label>
+  );
+}
+
+function SearchSelect({ placeholder, options, value, onChange }: { placeholder: string; options: string[]; value: string; onChange: (v: string) => void }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSelect = (option: string) => {
+    onChange(option === value ? "" : option);
+    setSearch("");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="relative">
+        <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={search || (value ? `✓ ${value}` : "")}
+          onChange={(e) => setSearch(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          className="w-full pl-9 pr-8 py-2 border border-border bg-background text-sm outline-none focus:border-primary"
+        />
+        <ChevronDown className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      </div>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 border border-border bg-background shadow-lg max-h-48 overflow-y-auto z-10">
+          {filtered.length > 0 ? (
+            filtered.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => handleSelect(option)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${value === option ? "bg-primary/10 text-primary font-medium" : ""}`}
+              >
+                {value === option && <span className="mr-2">✓</span>}
+                {option}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-xs text-muted-foreground">No encontradas</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

@@ -409,7 +409,8 @@ export const adminListCategorias = createServerFn({ method: "GET" })
       .from("productos")
       .select("categoria")
       .not("categoria", "is", null)
-      .order("categoria");
+      .order("categoria")
+      .limit(10000);
     if (error) throw new Error(error.message);
     const categorias = [...new Set(data?.map(p => p.categoria).filter(Boolean))].sort();
     return categorias;
@@ -423,7 +424,8 @@ export const adminListGrupos = createServerFn({ method: "GET" })
       .from("productos")
       .select("grupo")
       .not("grupo", "is", null)
-      .order("grupo");
+      .order("grupo")
+      .limit(10000);
     if (error) throw new Error(error.message);
     return [...new Set(data?.map(p => p.grupo).filter(Boolean))].sort();
   });
