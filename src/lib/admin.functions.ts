@@ -46,13 +46,24 @@ export const adminListProductos = createServerFn({ method: "GET" })
     cat: z.string().max(100).optional().nullable(),
     grupo: z.string().max(100).optional().nullable(),
     activo: z.enum(["all", "yes", "no"]).optional(),
+    sortBy: z.enum(["id", "nombre", "precio", "stock"]).optional(),
+    sortDir: z.enum(["asc", "desc"]).optional(),
   }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
     const page = data.page ?? 1;
     const pageSize = 30;
-    let q = context.supabase.from("productos").select("*", { count: "exact" }).order("id", { ascending: false });
-    if (data.q) q = q.ilike("nombre", `%${data.q}%`);
+    const sortBy = data.sortBy ?? "id";
+    const sortDir = data.sortDir ?? "desc";
+    let q = context.supabase
+      .from("productos")
+      .select("*", { count: "exact" })
+      .order(sortBy, { ascending: sortDir === "asc", nullsFirst: false });
+    if (sortBy !== "id") q = q.order("id", { ascending: false });
+    if (data.q) {
+      const term = data.q.replace(/[%_,]/g, "\\$&");
+      q = q.or(`nombre.ilike.%${term}%,sku.ilike.%${term}%,codigo_fabricante.ilike.%${term}%`);
+    }
     if (data.cat) q = q.eq("categoria", data.cat);
     if (data.grupo) q = q.eq("grupo", data.grupo);
     if (data.activo === "yes") q = q.eq("activo", true);

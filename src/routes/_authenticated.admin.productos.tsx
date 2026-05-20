@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
   adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp, adminPreviewImportProductosErp,
@@ -22,6 +22,9 @@ type ProductoForm = {
   image_url: string; image_webp: string;
   activo: boolean; precio_oferta: number | null; oferta_hasta: string | null;
 };
+type ProductSortBy = "id" | "nombre" | "precio" | "stock";
+type SortDir = "asc" | "desc";
+
 const empty: ProductoForm = {
   nombre: "", descripcion: "", categoria: "", grupo: "", sku: "", precio: 0, stock: 0,
   codigo_fabricante: "", precio_vta_sin_iva: null,
@@ -44,6 +47,8 @@ function AdminProductos() {
   const [cat, setCat] = useState("");
   const [grupo, setGrupo] = useState("");
   const [activo, setActivo] = useState<"all" | "yes" | "no">("all");
+  const [sortBy, setSortBy] = useState<ProductSortBy>("id");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editing, setEditing] = useState<ProductoForm | null>(null);
   // Persistente entre paginación / búsqueda / filtros
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -51,8 +56,8 @@ function AdminProductos() {
   const [importOpen, setImportOpen] = useState(false);
 
   const { data } = useQuery({
-    queryKey: ["admin-productos", q, page, cat, grupo, activo],
-    queryFn: () => list({ data: { q: q || null, page, cat: cat || null, grupo: grupo || null, activo } }),
+    queryKey: ["admin-productos", q, page, cat, grupo, activo, sortBy, sortDir],
+    queryFn: () => list({ data: { q: q || null, page, cat: cat || null, grupo: grupo || null, activo, sortBy, sortDir } }),
   });
 
   const { data: categorias } = useQuery({ queryKey: ["admin-categorias"], queryFn: () => listCategorias() });
@@ -78,6 +83,15 @@ function AdminProductos() {
     });
   }
   function clearSelection() { setSelected(new Set()); }
+  function changeSort(nextSortBy: ProductSortBy) {
+    setPage(1);
+    if (sortBy === nextSortBy) {
+      setSortDir((prev) => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(nextSortBy);
+      setSortDir(nextSortBy === "nombre" ? "asc" : "desc");
+    }
+  }
 
   async function save(v: ProductoForm) {
     const { image_url: _imageUrl, image_webp: _imageWebp, ...producto } = v;
@@ -150,7 +164,7 @@ function AdminProductos() {
         <div className="flex-1 min-w-[200px] relative">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
-            placeholder="Buscar producto..."
+            placeholder="Buscar por nombre, SKU o código fabricante..."
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-3 py-2 border border-border bg-background outline-none focus:border-primary text-sm"
@@ -191,11 +205,18 @@ function AdminProductos() {
                 />
               </th>
               <th className="text-left px-3 py-2 w-12"></th>
-              <th className="text-left px-3 py-2">Nombre</th>
+              <th className="text-left px-3 py-2">
+                <SortHeader label="Nombre" active={sortBy === "nombre"} dir={sortDir} onClick={() => changeSort("nombre")} />
+              </th>
               <th className="text-left px-3 py-2 hidden md:table-cell">SKU</th>
+              <th className="text-left px-3 py-2 hidden xl:table-cell">Cód. fabricante</th>
               <th className="text-left px-3 py-2 hidden lg:table-cell">Categoría</th>
-              <th className="text-right px-3 py-2">Precio</th>
-              <th className="text-right px-3 py-2">Stock</th>
+              <th className="text-right px-3 py-2">
+                <SortHeader label="Precio" active={sortBy === "precio"} dir={sortDir} align="right" onClick={() => changeSort("precio")} />
+              </th>
+              <th className="text-right px-3 py-2">
+                <SortHeader label="Stock" active={sortBy === "stock"} dir={sortDir} align="right" onClick={() => changeSort("stock")} />
+              </th>
               <th className="px-3 py-2 hidden md:table-cell">Estado</th>
               <th className="px-3 py-2"></th>
             </tr>
@@ -219,6 +240,7 @@ function AdminProductos() {
                     {enOferta && <BadgePercent className="inline-block size-3.5 ml-1.5 text-primary" />}
                   </td>
                   <td className="px-3 py-2 hidden md:table-cell text-muted-foreground">{p.sku}</td>
+                  <td className="px-3 py-2 hidden xl:table-cell text-muted-foreground">{p.codigo_fabricante || "-"}</td>
                   <td className="px-3 py-2 hidden lg:table-cell text-muted-foreground">{p.categoria}</td>
                   <td className="px-3 py-2 text-right">
                     {enOferta ? (
@@ -307,6 +329,27 @@ function BulkBtn({ icon, label, onClick, danger }: { icon: React.ReactNode; labe
       className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap hover:bg-background/10 ${danger ? "text-destructive" : ""}`}
     >
       {icon} {label}
+    </button>
+  );
+}
+
+function SortHeader({ label, active, dir, onClick, align = "left" }: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+  align?: "left" | "right";
+}) {
+  const Icon = active ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide hover:text-primary ${align === "right" ? "justify-end" : "justify-start"} w-full`}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <span>{label}</span>
+      <Icon className="size-3.5" />
     </button>
   );
 }
