@@ -85,7 +85,7 @@ export function InstagramReels() {
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-10"
-          }`}
+          } animate-fade-in-up`}
         >
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl">
             Seguinos en Instagram
@@ -95,7 +95,7 @@ export function InstagramReels() {
             href="https://www.instagram.com/decasanherramientas/"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-primary text-black rounded-lg"
+            className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-primary text-black rounded-lg animate-fade-in-up animate-delay-200"
           >
             <Instagram className="size-5" />
             Ver más contenido
@@ -104,13 +104,13 @@ export function InstagramReels() {
 
         {/* DESKTOP */}
         <div className="hidden lg:grid grid-cols-3 gap-6">
-          {FEATURED_REELS.map((reel) => (
+          {FEATURED_REELS.map((reel, idx) => (
             <a
               key={reel.id}
               href={reel.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative rounded-2xl overflow-hidden aspect-[9/16] bg-black"
+              className={`relative rounded-2xl overflow-hidden aspect-[9/16] bg-black animate-fade-in-up animate-delay-${(idx + 3) * 100}`}
             >
               <img
                 src={reel.thumbnail}
