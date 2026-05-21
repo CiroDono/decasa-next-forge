@@ -123,11 +123,14 @@ export type Database = {
           direccion: Json | null
           email: string | null
           estado: Database["public"]["Enums"]["pedido_estado"]
+          envio_metodo: Json | null
+          envio_total: number
           id: string
           mp_payment_id: string | null
           mp_preference_id: string | null
           nombre: string | null
           notas: string | null
+          subtotal_productos: number
           telefono: string | null
           total: number
           updated_at: string
@@ -138,11 +141,14 @@ export type Database = {
           direccion?: Json | null
           email?: string | null
           estado?: Database["public"]["Enums"]["pedido_estado"]
+          envio_metodo?: Json | null
+          envio_total?: number
           id?: string
           mp_payment_id?: string | null
           mp_preference_id?: string | null
           nombre?: string | null
           notas?: string | null
+          subtotal_productos?: number
           telefono?: string | null
           total?: number
           updated_at?: string
@@ -153,11 +159,14 @@ export type Database = {
           direccion?: Json | null
           email?: string | null
           estado?: Database["public"]["Enums"]["pedido_estado"]
+          envio_metodo?: Json | null
+          envio_total?: number
           id?: string
           mp_payment_id?: string | null
           mp_preference_id?: string | null
           nombre?: string | null
           notas?: string | null
+          subtotal_productos?: number
           telefono?: string | null
           total?: number
           updated_at?: string

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CreditCard, Truck, MessageCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ShippingCalculator } from "@/components/ShippingCalculator";
+import type { ShippingOption } from "@/lib/shipping.functions";
 import { useCart } from "@/lib/cart";
 import { useSession } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
@@ -30,7 +31,7 @@ function CheckoutPage() {
     calle: "", numero: "", piso: "", ciudad: "", provincia: "", codigo_postal: "",
     notas: "",
   });
-  const [selectedShipping, setSelectedShipping] = useState<any>(null);
+  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -73,11 +74,15 @@ function CheckoutPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedShipping) {
+      toast.error("Selecciona una opcion de envio");
+      return;
+    }
     setBusy(true);
     try {
       const res = await orderFn({
         data: {
-          items: items.map((i) => ({ id: i.id, nombre: i.nombre, precio: i.precio, qty: i.qty, sku: i.sku })),
+          items: items.map((i) => ({ id: i.id, qty: i.qty })),
           email: form.email,
           nombre: form.nombre,
           telefono: form.telefono,
@@ -85,13 +90,9 @@ function CheckoutPage() {
             calle: form.calle, numero: form.numero, piso: form.piso,
             ciudad: form.ciudad, provincia: form.provincia, codigo_postal: form.codigo_postal,
           },
-          envio: selectedShipping ? {
-            servicio: selectedShipping.servicio,
-            descripcion: selectedShipping.descripcion,
-            costo: selectedShipping.precio,
-            dias_habiles: selectedShipping.dias_habiles,
+          envio: {
             codigo_servicio: selectedShipping.codigo_servicio,
-          } : null,
+          },
           notas: form.notas || null,
         },
       });
@@ -165,15 +166,17 @@ function CheckoutPage() {
               <span>{selectedShipping ? formatARS(selectedShipping.precio) : "A coordinar"}</span>
             </div>
             <div className="flex justify-between font-display text-xl pt-3 border-t border-border">
-              <span>Total</span>
-              <span>{formatARS(total + (selectedShipping?.precio || 0))}</span>
+              <span>Total final</span>
+              <span className="text-right text-base leading-tight">
+                Validado al pagar
+              </span>
             </div>
 
-            <button disabled={busy} className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
+            <button disabled={busy || !selectedShipping} className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
               <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
             </button>
             <p className="text-xs text-muted-foreground text-center">
-              Vas a ser redirigido a Mercado Pago para completar el pago de forma segura.
+              El servidor valida precios, envio y total antes de redirigirte a Mercado Pago.
             </p>
             <a href="https://wa.me/5493548403666" target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-primary text-center flex items-center justify-center gap-1">
               <MessageCircle className="size-3" /> Pagar por transferencia / consultar

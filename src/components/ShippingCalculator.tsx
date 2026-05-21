@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Truck } from "lucide-react";
 import { calculateShipping } from "@/lib/shipping.functions";
+import type { ShippingOption } from "@/lib/shipping.functions";
 import { formatARS } from "@/lib/format";
 
 interface ShippingCalculatorProps {
@@ -11,7 +12,7 @@ interface ShippingCalculatorProps {
   largo?: number;
   ancho?: number;
   alto?: number;
-  onShippingSelect?: (option: any) => void;
+  onShippingSelect?: (option: ShippingOption | null) => void;
   selectedShipping?: string;
 }
 
@@ -42,11 +43,16 @@ export function ShippingCalculator({
   });
 
   useEffect(() => {
+    setLocalSelected("");
+    onShippingSelect?.(null);
+  }, [codigoPostal, peso]);
+
+  useEffect(() => {
     if (!localSelected && opciones?.[0]) {
       setLocalSelected(opciones[0].codigo_servicio);
       onShippingSelect?.(opciones[0]);
     }
-  }, [opciones]);
+  }, [localSelected, onShippingSelect, opciones]);
 
   if (!codigoPostal || codigoPostal.length < 4) {
     return (
