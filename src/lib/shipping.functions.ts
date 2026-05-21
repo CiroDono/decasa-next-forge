@@ -9,6 +9,8 @@ export interface ShippingOption {
   codigo_servicio: string;
 }
 
+export const LOCAL_PICKUP_CODE = "retiro-local";
+
 const shippingParamsSchema = z.object({
   peso: z.number().positive().max(500),
   destino_codigo_postal: z.string().trim().regex(/^\d{4,8}$/, "Codigo postal invalido"),
@@ -24,7 +26,7 @@ export type ShippingQuoteParams = z.infer<typeof shippingParamsSchema>;
 export const calculateShipping = createServerFn({ method: "POST" })
   .inputValidator((d) => shippingParamsSchema.parse(d))
   .handler(async ({ data: params }): Promise<ShippingOption[]> => {
-    return quoteCorreoArgentinoShipping(params);
+    return [getLocalPickupOption(), ...(await quoteCorreoArgentinoShipping(params))];
   });
 
 export async function quoteCorreoArgentinoShipping(params: ShippingQuoteParams): Promise<ShippingOption[]> {
@@ -113,6 +115,11 @@ export async function selectShippingOption(
   params: ShippingQuoteParams,
   codigoServicio: string,
 ): Promise<ShippingOption> {
+  if (codigoServicio === LOCAL_PICKUP_CODE) {
+    console.info("[shipping] local pickup selected");
+    return getLocalPickupOption();
+  }
+
   const options = await quoteCorreoArgentinoShipping(params);
   const selected = options.find((option) => option.codigo_servicio === codigoServicio);
   if (!selected) {
@@ -124,6 +131,16 @@ export async function selectShippingOption(
     throw new Error("La opcion de envio seleccionada ya no esta disponible");
   }
   return selected;
+}
+
+export function getLocalPickupOption(): ShippingOption {
+  return {
+    servicio: "Retiro en local",
+    descripcion: "Retiro por el local - Av. Pres. Kennedy 270, La Falda",
+    dias_habiles: 0,
+    precio: 0,
+    codigo_servicio: LOCAL_PICKUP_CODE,
+  };
 }
 
 function getDefaultShippingOptions(peso: number): ShippingOption[] {

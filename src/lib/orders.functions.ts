@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { selectShippingOption } from "@/lib/shipping.functions";
+import { LOCAL_PICKUP_CODE, selectShippingOption } from "@/lib/shipping.functions";
 
 const DEFAULT_ITEM_WEIGHT_KG = 1;
 
@@ -17,12 +17,12 @@ const createOrderSchema = z.object({
   nombre: z.string().trim().min(1).max(120),
   telefono: z.string().trim().min(1).max(40),
   direccion: z.object({
-    calle: z.string().trim().min(1).max(120),
+    calle: z.string().trim().max(120).optional().nullable(),
     numero: z.string().trim().max(20).optional().nullable(),
     piso: z.string().trim().max(20).optional().nullable(),
-    ciudad: z.string().trim().min(1).max(80),
-    provincia: z.string().trim().min(1).max(80),
-    codigo_postal: z.string().trim().regex(/^\d{4,8}$/, "Codigo postal invalido"),
+    ciudad: z.string().trim().max(80).optional().nullable(),
+    provincia: z.string().trim().max(80).optional().nullable(),
+    codigo_postal: z.string().trim().max(8).optional().nullable(),
   }),
   envio: z.object({
     codigo_servicio: z.string().trim().min(1).max(80),
@@ -55,6 +55,12 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       destinoCp: data.direccion.codigo_postal,
       shippingCode: data.envio.codigo_servicio,
     });
+
+    const isLocalPickup = data.envio.codigo_servicio === LOCAL_PICKUP_CODE;
+    const destinationPostalCode = data.direccion.codigo_postal?.trim() ?? "";
+    if (!isLocalPickup) {
+      validateShippingAddress(data.direccion);
+    }
 
     const ids = [...new Set(data.items.map((item) => item.id))];
     const { data: products, error: productError } = await supabaseAdmin
@@ -104,7 +110,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
     const shipping = await selectShippingOption(
       {
         peso: packageWeight,
-        destino_codigo_postal: data.direccion.codigo_postal,
+        destino_codigo_postal: isLocalPickup ? process.env.SHIPPING_ORIGIN_CP || "5172" : destinationPostalCode,
         cantidad_bultos: 1,
       },
       data.envio.codigo_servicio,
@@ -132,7 +138,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         email: data.email,
         nombre: data.nombre,
         telefono: data.telefono,
-        direccion: data.direccion,
+        direccion: isLocalPickup ? null : data.direccion,
         notas: data.notas ?? null,
       } as any)
       .select()
@@ -178,12 +184,16 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
           currency_id: "ARS",
           unit_price: item.precio_unitario,
         })),
-        {
-          title: shipping.descripcion.slice(0, 250),
-          quantity: 1,
-          currency_id: "ARS",
-          unit_price: shippingTotal,
-        },
+        ...(shippingTotal > 0
+          ? [
+              {
+                title: shipping.descripcion.slice(0, 250),
+                quantity: 1,
+                currency_id: "ARS",
+                unit_price: shippingTotal,
+              },
+            ]
+          : []),
       ],
       payer: { email: data.email, name: data.nombre },
       external_reference: pedido.id,
@@ -227,6 +237,15 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       mpConfigured: true,
     };
   });
+
+function validateShippingAddress(direccion: z.infer<typeof createOrderSchema>["direccion"]) {
+  if (!direccion.calle?.trim()) throw new Error("Ingresa la calle para el envio");
+  if (!direccion.ciudad?.trim()) throw new Error("Ingresa la ciudad para el envio");
+  if (!direccion.provincia?.trim()) throw new Error("Ingresa la provincia para el envio");
+  if (!direccion.codigo_postal?.trim() || !/^\d{4,8}$/.test(direccion.codigo_postal)) {
+    throw new Error("Ingresa un codigo postal valido para el envio");
+  }
+}
 
 function getEffectivePrice(product: ProductForOrder): number {
   const base = Number(product.precio ?? 0);

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CreditCard, Truck, MessageCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ShippingCalculator } from "@/components/ShippingCalculator";
+import { LOCAL_PICKUP_CODE } from "@/lib/shipping.functions";
 import type { ShippingOption } from "@/lib/shipping.functions";
 import { useCart } from "@/lib/cart";
 import { useSession } from "@/lib/auth";
@@ -33,6 +34,7 @@ function CheckoutPage() {
   });
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [busy, setBusy] = useState(false);
+  const isLocalPickup = selectedShipping?.codigo_servicio === LOCAL_PICKUP_CODE;
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login", search: { redirect: "/checkout", mode: "login" } });
@@ -125,24 +127,22 @@ function CheckoutPage() {
               </Grid>
             </Section>
 
-            <Section title="Dirección de envío">
+            <Section title="Entrega">
+              <div className="mb-4">
+                <ShippingCalculator
+                  codigoPostal={form.codigo_postal}
+                  onShippingSelect={setSelectedShipping}
+                  selectedShipping={selectedShipping?.codigo_servicio}
+                />
+              </div>
               <Grid>
-                <Field label="Calle" value={form.calle} onChange={(v) => setForm({ ...form, calle: v })} required />
+                <Field label="Calle" value={form.calle} onChange={(v) => setForm({ ...form, calle: v })} required={!isLocalPickup} />
                 <Field label="Número" value={form.numero} onChange={(v) => setForm({ ...form, numero: v })} />
                 <Field label="Piso/Depto" value={form.piso} onChange={(v) => setForm({ ...form, piso: v })} />
-                <Field label="Código postal" value={form.codigo_postal} onChange={(v) => setForm({ ...form, codigo_postal: v })} required />
-                <Field label="Ciudad" value={form.ciudad} onChange={(v) => setForm({ ...form, ciudad: v })} required />
-                <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} required />
+                <Field label="Código postal" value={form.codigo_postal} onChange={(v) => setForm({ ...form, codigo_postal: v })} required={!isLocalPickup} />
+                <Field label="Ciudad" value={form.ciudad} onChange={(v) => setForm({ ...form, ciudad: v })} required={!isLocalPickup} />
+                <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} required={!isLocalPickup} />
               </Grid>
-              {form.codigo_postal && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <ShippingCalculator
-                    codigoPostal={form.codigo_postal}
-                    onShippingSelect={setSelectedShipping}
-                    selectedShipping={selectedShipping?.codigo_servicio}
-                  />
-                </div>
-              )}
             </Section>
 
             <Section title="Notas (opcional)">
@@ -163,7 +163,7 @@ function CheckoutPage() {
             <div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatARS(total)}</span></div>
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-1"><Truck className="size-3" /> Envío</span>
-              <span>{selectedShipping ? formatARS(selectedShipping.precio) : "A coordinar"}</span>
+              <span>{selectedShipping ? selectedShipping.precio === 0 ? "Sin costo" : formatARS(selectedShipping.precio) : "A coordinar"}</span>
             </div>
             <div className="flex justify-between font-display text-xl pt-3 border-t border-border">
               <span>Total final</span>
