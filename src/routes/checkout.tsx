@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { CreditCard, Truck, MessageCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
+import { ShippingCalculator } from "@/components/ShippingCalculator";
 import { useCart } from "@/lib/cart";
 import { useSession } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
@@ -29,6 +30,7 @@ function CheckoutPage() {
     calle: "", numero: "", piso: "", ciudad: "", provincia: "", codigo_postal: "",
     notas: "",
   });
+  const [selectedShipping, setSelectedShipping] = useState<any>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -83,6 +85,13 @@ function CheckoutPage() {
             calle: form.calle, numero: form.numero, piso: form.piso,
             ciudad: form.ciudad, provincia: form.provincia, codigo_postal: form.codigo_postal,
           },
+          envio: selectedShipping ? {
+            servicio: selectedShipping.servicio,
+            descripcion: selectedShipping.descripcion,
+            costo: selectedShipping.precio,
+            dias_habiles: selectedShipping.dias_habiles,
+            codigo_servicio: selectedShipping.codigo_servicio,
+          } : null,
           notas: form.notas || null,
         },
       });
@@ -124,6 +133,15 @@ function CheckoutPage() {
                 <Field label="Ciudad" value={form.ciudad} onChange={(v) => setForm({ ...form, ciudad: v })} required />
                 <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} required />
               </Grid>
+              {form.codigo_postal && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <ShippingCalculator
+                    codigoPostal={form.codigo_postal}
+                    onShippingSelect={setSelectedShipping}
+                    selectedShipping={selectedShipping?.codigo_servicio}
+                  />
+                </div>
+              )}
             </Section>
 
             <Section title="Notas (opcional)">
@@ -142,8 +160,14 @@ function CheckoutPage() {
               ))}
             </ul>
             <div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatARS(total)}</span></div>
-            <div className="flex justify-between text-xs text-muted-foreground"><span><Truck className="size-3 inline" /> Envío</span><span>A coordinar</span></div>
-            <div className="flex justify-between font-display text-xl pt-3 border-t border-border"><span>Total</span><span>{formatARS(total)}</span></div>
+            <div className="flex justify-between text-sm">
+              <span className="flex items-center gap-1"><Truck className="size-3" /> Envío</span>
+              <span>{selectedShipping ? formatARS(selectedShipping.precio) : "A coordinar"}</span>
+            </div>
+            <div className="flex justify-between font-display text-xl pt-3 border-t border-border">
+              <span>Total</span>
+              <span>{formatARS(total + (selectedShipping?.precio || 0))}</span>
+            </div>
 
             <button disabled={busy} className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
               <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
