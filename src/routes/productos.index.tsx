@@ -104,9 +104,9 @@ function Catalog() {
     <Layout>
       <div className="bg-secondary text-secondary-foreground">
         <div className="container-x py-10">
-          <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2">Catálogo</div>
-          <h1 className="font-display text-3xl md:text-5xl">{search.cat ?? "Todos los productos"}</h1>
-          <p className="text-secondary-foreground/70 mt-2 text-sm">
+          <div className="text-xs uppercase tracking-[0.25em] text-primary mb-2 animate-fade-in-down">Catálogo</div>
+          <h1 className="font-display text-3xl md:text-5xl animate-fade-in-up animate-delay-100">{search.cat ?? "Todos los productos"}</h1>
+          <p className="text-secondary-foreground/70 mt-2 text-sm animate-fade-in-up animate-delay-200">
             {products.data?.count ?? "—"} productos
           </p>
         </div>
@@ -116,14 +116,14 @@ function Catalog() {
         {/* Mobile filter toggle */}
         <button
           onClick={() => setShowFilters((v) => !v)}
-          className="lg:hidden inline-flex items-center justify-center gap-2 border border-border px-4 py-2 text-sm font-medium"
+          className="lg:hidden inline-flex items-center justify-center gap-2 border border-border px-4 py-2 text-sm font-medium animate-fade-in-up animate-delay-300"
         >
           <SlidersHorizontal className="size-4" />
           {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
         </button>
 
         {/* sidebar */}
-        <aside className={`space-y-6 ${showFilters ? "block" : "hidden lg:block"}`}>
+        <aside className={`space-y-6 ${showFilters ? "block" : "hidden lg:block"} animate-fade-in-left animate-delay-400`}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <input
@@ -242,11 +242,11 @@ function Catalog() {
           {products.isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="aspect-[3/4] bg-muted animate-pulse" />
+                <div key={i} className={`aspect-[3/4] bg-muted animate-pulse animate-fade-in animate-delay-${i * 100}`} />
               ))}
             </div>
           ) : products.data?.items.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-border">
+            <div className="text-center py-20 border border-dashed border-border animate-fade-in-up animate-delay-500">
               <p className="text-muted-foreground mb-4">No se encontraron productos con esos filtros.</p>
               <button
                 onClick={reset}
@@ -258,12 +258,14 @@ function Catalog() {
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                {products.data?.items.map((p) => (
-                  <ProductCard key={p.id} p={p} />
+                {products.data?.items.map((p, idx) => (
+                  <div key={p.id} className={`animate-fade-in-up animate-delay-${Math.min(idx * 100, 900)}`}>
+                    <ProductCard p={p} />
+                  </div>
                 ))}
               </div>
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-10 flex-wrap">
+                <div className="flex items-center justify-center gap-2 mt-10 flex-wrap animate-fade-in-up animate-delay-700">
                   {Array.from({ length: Math.min(totalPages, 8) }).map((_, i) => {
                     const p = i + 1;
                     return (
