@@ -17,7 +17,7 @@ export function getMercadoPagoAccessToken() {
 
 export function getPublicBaseUrl() {
   const baseUrl = process.env.PUBLIC_BASE_URL || process.env.VITE_PUBLIC_BASE_URL || "";
-  return baseUrl.replace(/\/+$/, "");
+  return baseUrl.trim().replace(/^['"]|['"]$/g, "").replace(/\/+$/, "");
 }
 
 export function assertValidPublicBaseUrl(baseUrl: string) {
