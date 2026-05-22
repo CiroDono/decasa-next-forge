@@ -175,9 +175,12 @@ function CheckoutPage() {
               </span>
             </div>
 
-            <button disabled={busy || !selectedShipping} className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
-              <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
-            </button>
+<button 
+  disabled={busy} 
+  className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+>
+  <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
+</button>
             <p className="text-xs text-muted-foreground text-center">
               El servidor valida precios, envio y total antes de redirigirte a Mercado Pago.
             </p>

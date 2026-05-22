@@ -47,7 +47,7 @@ El calculador se utiliza en el checkout automáticamente:
 
 ```tsx
 <ShippingCalculator
-  codigoPostal="1636"  // Código postal del destinatario
+  codigoPostal="5172"  // Código postal del destinatario
   peso={2}             // Peso en kg
   largo={30}           // Largo en cm (opcional)
   ancho={20}           // Ancho en cm (opcional)
