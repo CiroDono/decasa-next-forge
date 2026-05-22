@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { Layout } from "@/components/Layout";
+import { ProductImage } from "@/components/ProductImage";
 import { useCart } from "@/lib/cart";
 import { formatARS } from "@/lib/format";
 
@@ -40,7 +41,21 @@ function CartPage() {
           <div className="border border-border divide-y divide-border bg-card">
             {items.map((i) => (
               <div key={i.id} className="p-4 flex gap-4 items-center">
-                <div className="size-16 bg-muted shrink-0" />
+                <Link
+                  to="/productos/$id"
+                  params={{ id: String(i.id) }}
+                  className="size-16 bg-muted shrink-0 overflow-hidden border border-border"
+                  aria-label={`Ver ${i.nombre}`}
+                >
+                  <ProductImage
+                    webp={i.image_webp}
+                    src={i.image_url}
+                    alt={i.nombre}
+                    className="size-full"
+                    iconClassName="size-8"
+                    sizes="64px"
+                  />
+                </Link>
                 <div className="flex-1 min-w-0">
                   <Link
                     to="/productos/$id"

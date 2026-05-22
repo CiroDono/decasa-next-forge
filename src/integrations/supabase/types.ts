@@ -119,6 +119,7 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          confirmation_email_sent_at: string | null
           created_at: string
           direccion: Json | null
           email: string | null
@@ -137,6 +138,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          confirmation_email_sent_at?: string | null
           created_at?: string
           direccion?: Json | null
           email?: string | null
@@ -155,6 +157,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          confirmation_email_sent_at?: string | null
           created_at?: string
           direccion?: Json | null
           email?: string | null

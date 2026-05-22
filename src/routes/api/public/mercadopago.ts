@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { sendOrderConfirmationEmail } from "@/lib/order-email";
 
 // Mercado Pago IPN/Webhook: https://www.mercadopago.com.ar/developers
 // MP envía POST con { type, data: { id } } o query params equivalentes.
@@ -39,10 +40,35 @@ export const Route = createFileRoute("/api/public/mercadopago")({
           status === "rejected" || status === "cancelled" ? "cancelado" :
           status === "refunded" ? "cancelado" : "pendiente";
 
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from("pedidos")
           .update({ estado, mp_payment_id: String(dataId) })
           .eq("id", externalRef);
+
+        if (updateError) {
+          console.error("[mp] order status update failed", { pedidoId: externalRef, error: updateError.message });
+          return new Response("error", { status: 200 });
+        }
+
+        if (estado === "pagado") {
+          const { data: pedido, error: orderError } = await supabaseAdmin
+            .from("pedidos")
+            .select("id,email,nombre,telefono,total,subtotal_productos,envio_total,envio_metodo,direccion,confirmation_email_sent_at,pedido_items(nombre,cantidad,precio_unitario,subtotal)")
+            .eq("id", externalRef)
+            .single();
+
+          if (orderError || !pedido) {
+            console.error("[mp] paid order lookup failed", { pedidoId: externalRef, error: orderError?.message });
+          } else if (!(pedido as any).confirmation_email_sent_at) {
+            const sent = await sendOrderConfirmationEmail(pedido as any);
+            if (sent) {
+              await supabaseAdmin
+                .from("pedidos")
+                .update({ confirmation_email_sent_at: new Date().toISOString() } as any)
+                .eq("id", externalRef);
+            }
+          }
+        }
 
         return new Response("ok", { status: 200 });
       },

@@ -6,6 +6,8 @@ export type CartItem = {
   nombre: string;
   precio: number;
   sku: string | null;
+  image_url?: string | null;
+  image_webp?: string | null;
   qty: number;
 };
 
