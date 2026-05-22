@@ -99,8 +99,11 @@ function CheckoutPage() {
         },
       });
       clear();
-      if (res.initPoint) {
-        window.location.href = res.initPoint;
+      const paymentUrl = res.initPoint ?? res.sandboxInitPoint;
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+      } else if (res.mpConfigured) {
+        toast.error(res.error ?? "No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo.");
       } else {
         toast.success("Pedido creado. Te contactamos para coordinar el pago.");
         navigate({ to: "/cuenta" });

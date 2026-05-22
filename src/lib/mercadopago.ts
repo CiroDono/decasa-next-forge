@@ -12,12 +12,16 @@ export type MercadoPagoPayment = {
 };
 
 export function getMercadoPagoAccessToken() {
-  return process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN || "";
+  return cleanEnvValue(process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN || "");
 }
 
 export function getPublicBaseUrl() {
   const baseUrl = process.env.PUBLIC_BASE_URL || process.env.VITE_PUBLIC_BASE_URL || "";
-  return baseUrl.trim().replace(/^['"]|['"]$/g, "").replace(/\/+$/, "");
+  return cleanEnvValue(baseUrl).replace(/\/+$/, "");
+}
+
+function cleanEnvValue(value: string) {
+  return value.trim().replace(/^['"]|['"]$/g, "");
 }
 
 export function assertValidPublicBaseUrl(baseUrl: string) {
