@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { LOCAL_PICKUP_CODE, selectShippingOption } from "@/lib/shipping.functions";
+import { assertValidPublicBaseUrl, getMercadoPagoAccessToken, getPublicBaseUrl } from "@/lib/mercadopago";
 
 const DEFAULT_ITEM_WEIGHT_KG = 1;
 
@@ -126,6 +127,10 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       shippingCode: shipping.codigo_servicio,
     });
 
+    const MP_TOKEN = getMercadoPagoAccessToken();
+    const origin = getPublicBaseUrl();
+    if (MP_TOKEN) assertValidPublicBaseUrl(origin);
+
     const { data: pedido, error } = await supabase
       .from("pedidos")
       .insert({
@@ -163,7 +168,6 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       throw new Error(itemError.message);
     }
 
-    const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!MP_TOKEN) {
       console.warn("[orders] Mercado Pago token missing", { requestId, pedidoId: pedido.id });
       return {
@@ -175,7 +179,6 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       };
     }
 
-    const origin = process.env.PUBLIC_BASE_URL ?? "";
     const prefBody = {
       items: [
         ...validatedItems.map((item) => ({
@@ -203,7 +206,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         pending: `${origin}/cuenta?pedido=${pedido.id}`,
       },
       auto_return: "approved",
-      notification_url: `${origin}/api/public/mercadopago`,
+      notification_url: `${origin}/api/public/mercadopago?source_news=webhooks`,
     };
 
     const resp = await fetch("https://api.mercadopago.com/checkout/preferences", {
