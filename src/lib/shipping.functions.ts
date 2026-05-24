@@ -13,8 +13,8 @@ export const LOCAL_PICKUP_CODE = "retiro-local";
 
 const shippingParamsSchema = z.object({
   peso: z.number().positive().max(500),
-  destino_codigo_postal: z.string().trim().regex(/^\d{4,8}$/, "Codigo postal invalido"),
-  origen_codigo_postal: z.string().trim().regex(/^\d{4,8}$/).optional(),
+  destino_codigo_postal: z.string().trim().min(4, "Codigo postal invalido"), 
+  origen_codigo_postal: z.string().trim().min(4).optional(),
   cantidad_bultos: z.number().int().positive().optional(),
   largo: z.number().nonnegative().optional(),
   ancho: z.number().nonnegative().optional(),
@@ -61,7 +61,7 @@ export async function quoteCorreoArgentinoShipping(params: ShippingQuoteParams):
           idProvincia: 3,
         },
         recibe: {
-          codigoPostal: params.destino_codigo_postal,
+          codigoPostal: params.destino_codigo_postal.replace(/\D/g, '').substring(0, 4) || params.destino_codigo_postal,
         },
         envios: [
           {

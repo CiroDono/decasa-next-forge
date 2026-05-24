@@ -69,12 +69,8 @@ export function ShippingCalculator({
     );
   }
 
-  if (error && shippingOptions.length === 0) {
-    return (
-      <div className="p-4 bg-muted/30 rounded-lg border border-border">
-        <p className="text-sm text-muted-foreground">No hay opciones de envio disponibles para esta zona</p>
-      </div>
-    );
+  if (error) {
+    console.error("Fallo el calculador de envío:", error); 
   }
 
   return (
