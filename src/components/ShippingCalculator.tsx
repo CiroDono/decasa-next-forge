@@ -29,19 +29,21 @@ export function ShippingCalculator({
   const [localSelected, setLocalSelected] = useState<string>(selectedShipping || "");
   const canQuoteShipping = codigoPostal.trim().length >= 4;
 
-  const { data: opciones, isLoading, error } = useQuery({
+const { data: opciones, isLoading, error } = useQuery({
     queryKey: ["shipping", codigoPostal, peso],
     queryFn: () =>
       shippingFn({
-        peso,
-        destino_codigo_postal: codigoPostal,
-        cantidad_bultos: 1,
-        largo,
-        ancho,
-        alto,
+        data: {
+          peso,
+          destino_codigo_postal: codigoPostal,
+          cantidad_bultos: 1,
+          largo,
+          ancho,
+          alto,
+        }
       }),
     enabled: canQuoteShipping,
-  });
+  }); 
 
   const shippingOptions = useMemo(
     () => opciones ?? [getLocalPickupOption()],

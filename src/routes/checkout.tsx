@@ -40,6 +40,12 @@ function CheckoutPage() {
     if (!loading && !user) navigate({ to: "/login", search: { redirect: "/checkout", mode: "login" } });
   }, [loading, user, navigate]);
 
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useEffect(() => {
     if (profile.data) {
       const p = profile.data.profile;
@@ -59,8 +65,7 @@ function CheckoutPage() {
     }
   }, [profile.data, user]);
 
-  if (loading || !user) return <Layout><div className="container-x py-20 text-center text-muted-foreground">Cargando...</div></Layout>;
-
+if (!isMounted || loading || !user) return <Layout><div className="container-x py-20 text-center text-muted-foreground">Cargando...</div></Layout>;
   if (items.length === 0) {
     return (
       <Layout>
