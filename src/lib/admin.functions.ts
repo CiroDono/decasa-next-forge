@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeCategoryName, uniqueSortedCategories } from "@/lib/categories";
 
 async function ensureAdmin(supabase: any, userId: string) {
   const { data } = await supabase
@@ -78,7 +79,7 @@ const productoSchema = z.object({
   id: z.number().int().optional(),
   nombre: z.string().trim().min(1).max(255),
   descripcion: z.string().max(5000).optional().nullable(),
-  categoria: z.string().max(100).optional().nullable(),
+  categoria: z.string().max(100).optional().nullable().transform(normalizeCategoryName),
   grupo: z.string().max(100).optional().nullable(),
   sku: z.string().max(80).optional().nullable(),
   codigo_fabricante: z.string().max(120).optional().nullable(),
@@ -122,7 +123,7 @@ export const adminDeleteProducto = createServerFn({ method: "POST" })
 // === BULK ACTIONS ===
 
 const bulkSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("set_categoria"), ids: z.array(z.number().int()).min(1).max(500), categoria: z.string().max(100).nullable() }),
+  z.object({ action: z.literal("set_categoria"), ids: z.array(z.number().int()).min(1).max(500), categoria: z.string().max(100).nullable().transform(normalizeCategoryName) }),
   z.object({ action: z.literal("set_grupo"), ids: z.array(z.number().int()).min(1).max(500), grupo: z.string().max(100).nullable() }),
   z.object({ action: z.literal("set_activo"), ids: z.array(z.number().int()).min(1).max(500), activo: z.boolean() }),
   z.object({ action: z.literal("adjust_precio_pct"), ids: z.array(z.number().int()).min(1).max(500), pct: z.number().min(-90).max(500) }),
@@ -406,14 +407,23 @@ export const adminListCategorias = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
+      .from("categorias")
+      .select("nombre")
+      .eq("activo", true)
+      .order("orden", { ascending: true, nullsFirst: false })
+      .order("nombre", { ascending: true });
+
+    if (!error) return uniqueSortedCategories((data ?? []).map((c: any) => c.nombre));
+
+    console.warn("[admin] categorias table unavailable, falling back to productos", error.message);
+    const fallback = await context.supabase
       .from("productos")
       .select("categoria")
       .not("categoria", "is", null)
       .order("categoria")
       .limit(10000);
-    if (error) throw new Error(error.message);
-    const categorias = [...new Set(data?.map(p => p.categoria).filter(Boolean))].sort();
-    return categorias;
+    if (fallback.error) throw new Error(fallback.error.message);
+    return uniqueSortedCategories(fallback.data?.map((p: any) => p.categoria) ?? []);
   });
 
 export const adminListGrupos = createServerFn({ method: "GET" })

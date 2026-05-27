@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeCategoryName, uniqueSortedCategories } from "@/lib/categories";
 
 export type Producto = {
   id: number;
@@ -55,7 +56,8 @@ export async function fetchProductos(opts: {
 }): Promise<{ items: Producto[]; count: number }> {
   let query = supabase.from("productos").select("*", { count: "exact" });
 
-  if (opts.cat) query = query.eq("categoria", opts.cat);
+  const normalizedCat = normalizeCategoryName(opts.cat);
+  if (normalizedCat) query = query.eq("categoria", normalizedCat);
   if (opts.grupo) query = query.eq("grupo", opts.grupo);
   if (typeof opts.min === "number") query = query.gte("precio", opts.min);
   if (typeof opts.max === "number") query = query.lte("precio", opts.max);
@@ -109,13 +111,18 @@ export async function fetchProductoImagenes(productoId: number): Promise<Product
 }
 
 export async function fetchCategorias(): Promise<string[]> {
-  const { data, error } = await supabase.from("productos").select("categoria");
-  if (error) throw error;
-  const set = new Set<string>();
-  (data ?? []).forEach((r: { categoria: string | null }) => {
-    if (r.categoria) set.add(r.categoria);
-  });
-  return Array.from(set).sort();
+  const { data, error } = await (supabase as any)
+    .from("categorias")
+    .select("nombre")
+    .eq("activo", true)
+    .order("orden", { ascending: true, nullsFirst: false })
+    .order("nombre", { ascending: true });
+
+  if (!error) return uniqueSortedCategories((data ?? []).map((c: { nombre: string | null }) => c.nombre));
+
+  const fallback = await supabase.from("productos").select("categoria");
+  if (fallback.error) throw fallback.error;
+  return uniqueSortedCategories((fallback.data ?? []).map((r: { categoria: string | null }) => r.categoria));
 }
 
 export async function fetchGrupos(): Promise<string[]> {

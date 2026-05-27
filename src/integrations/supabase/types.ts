@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      categorias: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          descripcion: string | null
+          id: number
+          nombre: string
+          orden: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: never
+          nombre: string
+          orden?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: never
+          nombre?: string
+          orden?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       direcciones: {
         Row: {
           calle: string
