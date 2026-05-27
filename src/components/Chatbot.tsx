@@ -9,6 +9,8 @@ const WHATSAPP = "5493548403666";
 const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
   "Hola Decasan, tengo una consulta a realizar.",
 )}`;
+const SITE_URL = "https://decasan.lovable.app";
+const SAFE_LINK_HOSTS = new Set(["decasan.lovable.app", "wa.me", "www.instagram.com", "web.facebook.com"]);
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -228,7 +230,7 @@ function Bubble({ msg }: { msg: Msg }) {
           <ReactMarkdown
             components={{
               a: ({ href, children }) => (
-                <a href={href} target="_blank" rel="noreferrer" className="underline">
+                <a href={safeChatHref(href)} target="_blank" rel="noreferrer" className="underline">
                   {children}
                 </a>
               ),
@@ -240,6 +242,18 @@ function Bubble({ msg }: { msg: Msg }) {
       </div>
     </div>
   );
+}
+
+function safeChatHref(href: string | undefined): string {
+  if (!href) return `${SITE_URL}/productos`;
+  if (href.startsWith("/productos")) return `${SITE_URL}${href}`;
+  try {
+    const url = new URL(href);
+    if (SAFE_LINK_HOSTS.has(url.hostname)) return url.toString();
+  } catch {
+    return `${SITE_URL}/productos`;
+  }
+  return `${SITE_URL}/productos`;
 }
 
 function Avatar() {
