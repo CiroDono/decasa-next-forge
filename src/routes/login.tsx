@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Eye, EyeOff, Check, X } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
+import { canonicalGmail, checkGmailAvailability } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -43,6 +45,7 @@ function LoginPage() {
   const [telefono, setTelefono] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState<string | null>(null);
+  const checkEmailFn = useServerFn(checkGmailAvailability);
 
   const passChecks = useMemo(() => ({
     len: password.length >= 8,
@@ -73,11 +76,17 @@ function LoginPage() {
         if (!PHONE_RE.test(telefono)) throw new Error("Teléfono inválido.");
         if (!passOk) throw new Error("La contraseña no cumple los requisitos.");
 
+        const normalizedEmail = email.trim().toLowerCase();
+        const availability = await checkEmailFn({ data: { email: normalizedEmail } });
+        if (!availability.available) {
+          throw new Error("Ya existe una cuenta con ese Gmail. Iniciá sesión o recuperá tu contraseña.");
+        }
+
         const { data, error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           password,
           options: {
-            data: { nombre: nombre.trim(), dni, telefono },
+            data: { nombre: nombre.trim(), dni, telefono, email_canonical: canonicalGmail(normalizedEmail) },
             emailRedirectTo: window.location.origin,
           },
         });

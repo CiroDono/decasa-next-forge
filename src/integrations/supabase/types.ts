@@ -309,6 +309,7 @@ export type Database = {
         Row: {
           created_at: string
           dni: string | null
+          email_canonical: string | null
           id: string
           nombre: string | null
           telefono: string | null
@@ -317,6 +318,7 @@ export type Database = {
         Insert: {
           created_at?: string
           dni?: string | null
+          email_canonical?: string | null
           id: string
           nombre?: string | null
           telefono?: string | null
@@ -325,6 +327,7 @@ export type Database = {
         Update: {
           created_at?: string
           dni?: string | null
+          email_canonical?: string | null
           id?: string
           nombre?: string | null
           telefono?: string | null

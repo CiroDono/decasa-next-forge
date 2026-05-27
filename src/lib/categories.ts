@@ -6,7 +6,6 @@ export const DEFAULT_CATEGORIES = [
   "Sanitarios e instalaciones",
   "Jardín",
   "Materiales",
-  "Otros",
 ] as const;
 
 export function normalizeCategoryName(value: string | null | undefined): string | null {

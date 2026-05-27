@@ -16,11 +16,13 @@ values
   ('H. Eléctricas', 4, true),
   ('Sanitarios e instalaciones', 5, true),
   ('Jardín', 6, true),
-  ('Materiales', 7, true),
-  ('Otros', 8, true)
+  ('Materiales', 7, true)
 on conflict (nombre) do update
 set orden = excluded.orden,
     activo = true;
+
+delete from public.categorias
+where nombre = 'Otros';
 
 update public.productos
 set categoria = 'H. Eléctricas'
