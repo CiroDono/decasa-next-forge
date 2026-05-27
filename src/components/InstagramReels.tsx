@@ -25,8 +25,8 @@ const FEATURED_REELS: Reel[] = [
   },
   {
     id: "3",
-    url: "https://www.instagram.com/reel/DXhSmb4DYnZ/",
-    title: "Ganadores del sorteo",
+    url: "https://www.instagram.com/p/DYpIzMrA_CE/",
+    title: "Sierra Viral",
     thumbnail:
       "/reel3.png",
   },
