@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Store, Truck } from "lucide-react";
+import { Loader2, MapPin, Store, Truck } from "lucide-react";
 import { calculateShipping, getLocalPickupOption, LOCAL_PICKUP_CODE } from "@/lib/shipping.functions";
 import type { ShippingOption } from "@/lib/shipping.functions";
 import { formatARS } from "@/lib/format";
@@ -29,8 +29,8 @@ export function ShippingCalculator({
   const [localSelected, setLocalSelected] = useState<string>(selectedShipping || "");
   const canQuoteShipping = codigoPostal.trim().length >= 4;
 
-const { data: opciones, isLoading, error } = useQuery({
-    queryKey: ["shipping", codigoPostal, peso],
+  const { data: opciones, isLoading, error } = useQuery({
+    queryKey: ["shipping", codigoPostal, peso, largo, ancho, alto],
     queryFn: () =>
       shippingFn({
         data: {
@@ -40,15 +40,16 @@ const { data: opciones, isLoading, error } = useQuery({
           largo,
           ancho,
           alto,
-        }
+        },
       }),
     enabled: canQuoteShipping,
-  }); 
+  });
 
   const shippingOptions = useMemo(
     () => opciones ?? [getLocalPickupOption()],
     [opciones],
   );
+  const hasBranchOptions = shippingOptions.some((opcion) => opcion.tipo === "sucursal");
 
   useEffect(() => {
     setLocalSelected("");
@@ -86,6 +87,11 @@ const { data: opciones, isLoading, error } = useQuery({
           Ingresa un codigo postal para ver envios. Tambien podes retirar por el local.
         </p>
       )}
+      {canQuoteShipping && !isLoading && !hasBranchOptions && (
+        <p className="text-xs text-muted-foreground">
+          No encontramos sucursales cercanas para ese codigo postal. Podes elegir envio a domicilio o retiro por el local.
+        </p>
+      )}
       <div className="space-y-2">
         {shippingOptions.map((opcion) => (
           <label
@@ -106,11 +112,25 @@ const { data: opciones, isLoading, error } = useQuery({
             <div className="flex-1">
               <p className="font-medium text-sm flex items-center gap-2">
                 {opcion.codigo_servicio === LOCAL_PICKUP_CODE && <Store className="size-3" />}
+                {opcion.tipo === "sucursal" && <MapPin className="size-3" />}
                 {opcion.descripcion}
               </p>
               <p className="text-xs text-muted-foreground">
                 {opcion.dias_habiles === 0 ? "Sin costo de envio" : `${opcion.dias_habiles} dias habiles`}
               </p>
+              {opcion.sucursal && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {[
+                    opcion.sucursal.direccion,
+                    opcion.sucursal.localidad,
+                    opcion.sucursal.provincia,
+                    opcion.sucursal.codigo_postal ? `CP ${opcion.sucursal.codigo_postal}` : null,
+                  ].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {opcion.sucursal?.horario && (
+                <p className="text-xs text-muted-foreground mt-1">{opcion.sucursal.horario}</p>
+              )}
             </div>
             <p className="font-semibold text-sm">{formatARS(opcion.precio)}</p>
           </label>

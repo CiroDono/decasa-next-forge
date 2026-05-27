@@ -25,7 +25,7 @@ const FEATURED_REELS: Reel[] = [
   },
   {
     id: "3",
-    url: "https://www.instagram.com/p/DYpIzMrA_CE/",
+    url: "https://www.instagram.com/reel/DYpIzMrA_CE/",
     title: "Sierra Viral",
     thumbnail:
       "/reel3.png",

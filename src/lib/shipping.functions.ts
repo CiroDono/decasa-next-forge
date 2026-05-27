@@ -7,6 +7,18 @@ export interface ShippingOption {
   dias_habiles: number;
   precio: number;
   codigo_servicio: string;
+  tipo?: "local" | "domicilio" | "sucursal";
+  sucursal?: PickupBranch;
+}
+
+export interface PickupBranch {
+  id: string;
+  nombre: string;
+  direccion: string;
+  localidad?: string;
+  provincia?: string;
+  codigo_postal?: string;
+  horario?: string;
 }
 
 export const LOCAL_PICKUP_CODE = "retiro-local";
@@ -26,7 +38,12 @@ export type ShippingQuoteParams = z.infer<typeof shippingParamsSchema>;
 export const calculateShipping = createServerFn({ method: "POST" })
   .inputValidator((d) => shippingParamsSchema.parse(d))
   .handler(async ({ data: params }): Promise<ShippingOption[]> => {
-    return [getLocalPickupOption(), ...(await quoteCorreoArgentinoShipping(params))];
+    const [homeOptions, pickupBranches] = await Promise.all([
+      quoteCorreoArgentinoShipping(params),
+      getCorreoArgentinoPickupBranches(params.destino_codigo_postal),
+    ]);
+    const branchOptions = buildPickupBranchOptions(pickupBranches, homeOptions);
+    return [getLocalPickupOption(), ...branchOptions, ...homeOptions];
   });
 
 export async function quoteCorreoArgentinoShipping(params: ShippingQuoteParams): Promise<ShippingOption[]> {
@@ -103,6 +120,7 @@ export async function quoteCorreoArgentinoShipping(params: ShippingQuoteParams):
         dias_habiles: Number(s.plazoEntrega ?? s.dias_habiles ?? 5),
         precio: roundMoney(precio),
         codigo_servicio: String(s.idProducto ?? s.codigo_servicio ?? s.producto ?? "correo-argentino"),
+        tipo: "domicilio",
       };
     });
   } catch (error) {
@@ -118,6 +136,20 @@ export async function selectShippingOption(
   if (codigoServicio === LOCAL_PICKUP_CODE) {
     console.info("[shipping] local pickup selected");
     return getLocalPickupOption();
+  }
+
+  if (codigoServicio.startsWith("correo-sucursal:")) {
+    const [homeOptions, pickupBranches] = await Promise.all([
+      quoteCorreoArgentinoShipping(params),
+      getCorreoArgentinoPickupBranches(params.destino_codigo_postal),
+    ]);
+    const selected = buildPickupBranchOptions(pickupBranches, homeOptions).find(
+      (option) => option.codigo_servicio === codigoServicio,
+    );
+    if (!selected) {
+      throw new Error("La sucursal seleccionada ya no esta disponible");
+    }
+    return selected;
   }
 
   const options = await quoteCorreoArgentinoShipping(params);
@@ -140,6 +172,90 @@ export function getLocalPickupOption(): ShippingOption {
     dias_habiles: 0,
     precio: 0,
     codigo_servicio: LOCAL_PICKUP_CODE,
+    tipo: "local",
+  };
+}
+
+async function getCorreoArgentinoPickupBranches(codigoPostal: string): Promise<PickupBranch[]> {
+  const apiKey = process.env.CORREO_ARGENTINO_API_KEY || process.env.CORREO_ARGENTINO_AGENCIES_API_KEY || "";
+  const agreement = process.env.CORREO_ARGENTINO_AGREEMENT || "";
+  const baseUrl = process.env.CORREO_ARGENTINO_AGENCIES_URL || "https://api.correoargentino.com.ar/paqar/v1/agencies";
+
+  if (!apiKey || !agreement) {
+    console.warn("[shipping] Correo Argentino agencies credentials missing. Skipping pickup branches.");
+    return [];
+  }
+
+  try {
+    const cp = codigoPostal.replace(/\D/g, "").substring(0, 4);
+    const url = new URL(baseUrl);
+    url.searchParams.set("postal_code", cp);
+    url.searchParams.set("postalCode", cp);
+    url.searchParams.set("zipCode", cp);
+    url.searchParams.set("pickup_availability", "true");
+    url.searchParams.set("package_reception", "true");
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Apikey ${apiKey}`,
+        agreement,
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error("[shipping] Correo Argentino agencies failed", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      return [];
+    }
+
+    const data = await response.json();
+    const rawBranches = data?.agencies ?? data?.sucursales ?? data?.resultado ?? data?.data ?? data;
+    if (!Array.isArray(rawBranches)) return [];
+
+    return rawBranches.map(normalizePickupBranch).filter((branch): branch is PickupBranch => Boolean(branch));
+  } catch (error) {
+    console.error("[shipping] agencies lookup error", error);
+    return [];
+  }
+}
+
+function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: ShippingOption[]): ShippingOption[] {
+  const reference = homeOptions.find((option) => option.precio > 0) ?? homeOptions[0];
+  const price = reference ? reference.precio : 0;
+  const days = reference ? reference.dias_habiles : 5;
+
+  return branches.slice(0, 5).map((branch) => ({
+    servicio: "Retiro en sucursal Correo Argentino",
+    descripcion: `Retiro en sucursal - ${branch.nombre}`,
+    dias_habiles: days,
+    precio: price,
+    codigo_servicio: `correo-sucursal:${branch.id}`,
+    tipo: "sucursal" as const,
+    sucursal: branch,
+  }));
+}
+
+function normalizePickupBranch(raw: any): PickupBranch | null {
+  const id = String(raw.id ?? raw.code ?? raw.codigo ?? raw.agency_id ?? raw.sucursalId ?? "").trim();
+  const nombre = String(raw.name ?? raw.nombre ?? raw.description ?? raw.descripcion ?? "Sucursal Correo Argentino").trim();
+  const street = raw.address ?? raw.direccion ?? raw.street ?? raw.calle;
+  const number = raw.number ?? raw.numero;
+  const direccion = [street, number].filter(Boolean).join(" ").trim();
+
+  if (!id || !direccion) return null;
+
+  return {
+    id,
+    nombre,
+    direccion,
+    localidad: raw.city ?? raw.localidad ?? raw.town ?? undefined,
+    provincia: raw.state ?? raw.provincia ?? raw.province ?? undefined,
+    codigo_postal: raw.postal_code ?? raw.codigo_postal ?? raw.zipCode ?? undefined,
+    horario: raw.business_hours ?? raw.horario ?? raw.opening_hours ?? undefined,
   };
 }
 
@@ -151,6 +267,7 @@ function getDefaultShippingOptions(peso: number): ShippingOption[] {
       dias_habiles: 6,
       precio: calculateDefaultPrice(peso),
       codigo_servicio: "estandar",
+      tipo: "domicilio",
     },
     {
       servicio: "Rapido",
@@ -158,6 +275,7 @@ function getDefaultShippingOptions(peso: number): ShippingOption[] {
       dias_habiles: 3,
       precio: roundMoney(calculateDefaultPrice(peso) * 1.5),
       codigo_servicio: "rapido",
+      tipo: "domicilio",
     },
     {
       servicio: "Express",
@@ -165,6 +283,7 @@ function getDefaultShippingOptions(peso: number): ShippingOption[] {
       dias_habiles: 1,
       precio: roundMoney(calculateDefaultPrice(peso) * 2.5),
       codigo_servicio: "express",
+      tipo: "domicilio",
     },
   ];
 }
