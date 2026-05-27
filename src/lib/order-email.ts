@@ -1,4 +1,5 @@
 import { formatARS } from "@/lib/format";
+import { escapeHtml, sendTransactionalEmail } from "@/lib/email";
 
 type OrderEmailItem = {
   nombre: string;
@@ -21,50 +22,16 @@ type OrderEmailData = {
 };
 
 export async function sendOrderConfirmationEmail(order: OrderEmailData): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
   const to = order.email?.trim();
-
-  if (!apiKey) {
-    console.warn("[email] RESEND_API_KEY missing. Skipping order confirmation email.", { pedidoId: order.id });
-    return false;
-  }
 
   if (!to) {
     console.warn("[email] order has no recipient email", { pedidoId: order.id });
     return false;
   }
 
-  const from = process.env.ORDER_EMAIL_FROM || "Decasan <onboarding@resend.dev>";
-  const bcc = process.env.ORDER_EMAIL_BCC;
   const subject = `Confirmacion de compra Decasan #${order.id.slice(0, 8)}`;
   const html = buildOrderEmailHtml(order);
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to,
-      ...(bcc ? { bcc } : {}),
-      subject,
-      html,
-    }),
-  });
-
-  if (!response.ok) {
-    console.error("[email] order confirmation failed", {
-      pedidoId: order.id,
-      status: response.status,
-      body: await response.text(),
-    });
-    return false;
-  }
-
-  console.info("[email] order confirmation sent", { pedidoId: order.id, to });
-  return true;
+  return sendTransactionalEmail({ to, subject, html, logContext: { kind: "order_confirmation", pedidoId: order.id } });
 }
 
 function buildOrderEmailHtml(order: OrderEmailData): string {
@@ -137,13 +104,4 @@ function formatAddress(address: any): string {
   ]
     .filter(Boolean)
     .join(", ");
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }

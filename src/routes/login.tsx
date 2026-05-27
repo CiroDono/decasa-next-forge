@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Check, X } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
-import { canonicalGmail, checkGmailAvailability } from "@/lib/auth.functions";
+import { canonicalGmail, checkGmailAvailability, sendLoginSuccessEmail } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -46,6 +46,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState<string | null>(null);
   const checkEmailFn = useServerFn(checkGmailAvailability);
+  const sendLoginEmailFn = useServerFn(sendLoginSuccessEmail);
 
   const passChecks = useMemo(() => ({
     len: password.length >= 8,
@@ -96,6 +97,7 @@ function LoginPage() {
           toast.success("Cuenta creada. Te enviamos un email para confirmarla.");
           setMode("login");
         } else {
+          await sendLoginEmailFn().catch(() => null);
           toast.success("Bienvenido");
           navigate({ to: search.redirect });
         }
@@ -105,6 +107,7 @@ function LoginPage() {
           password,
         });
         if (error) throw error;
+        await sendLoginEmailFn().catch(() => null);
         toast.success("Bienvenido");
         navigate({ to: search.redirect });
       }
