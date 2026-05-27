@@ -8,6 +8,21 @@ type OrderEmailItem = {
   subtotal: number;
 };
 
+type OrderShippingMethod = {
+  descripcion?: string | null;
+  servicio?: string | null;
+  codigo_servicio?: string | null;
+};
+
+type OrderAddress = {
+  calle?: string | null;
+  numero?: string | null;
+  piso?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  codigo_postal?: string | null;
+};
+
 type OrderEmailData = {
   id: string;
   email: string | null;
@@ -16,8 +31,8 @@ type OrderEmailData = {
   total: number;
   subtotal_productos?: number | null;
   envio_total?: number | null;
-  envio_metodo?: any;
-  direccion?: any;
+  envio_metodo?: OrderShippingMethod | null;
+  direccion?: OrderAddress | null;
   pedido_items?: OrderEmailItem[];
 };
 
@@ -31,7 +46,12 @@ export async function sendOrderConfirmationEmail(order: OrderEmailData): Promise
 
   const subject = `Confirmacion de compra Decasan #${order.id.slice(0, 8)}`;
   const html = buildOrderEmailHtml(order);
-  return sendTransactionalEmail({ to, subject, html, logContext: { kind: "order_confirmation", pedidoId: order.id } });
+  return sendTransactionalEmail({
+    to,
+    subject,
+    html,
+    logContext: { kind: "order_confirmation", pedidoId: order.id },
+  });
 }
 
 function buildOrderEmailHtml(order: OrderEmailData): string {
@@ -93,7 +113,7 @@ function buildOrderEmailHtml(order: OrderEmailData): string {
   `;
 }
 
-function formatAddress(address: any): string {
+function formatAddress(address: OrderAddress | null | undefined): string {
   if (!address) return "A coordinar";
   return [
     [address.calle, address.numero].filter(Boolean).join(" "),
