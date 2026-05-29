@@ -73,24 +73,6 @@ function FaqPage() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-surface">
-        <div className="container-x grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
-          {[
-            { icon: MapPin, t: "La Falda", s: "Cordoba" },
-            { icon: Truck, t: "Envios", s: "A todo el pais" },
-            { icon: CreditCard, t: "Pago seguro", s: "Mercado Pago" },
-            { icon: ShieldCheck, t: "Garantia", s: "Marcas originales" },
-          ].map(({ icon: Icon, t, s }) => (
-            <div key={t} className="bg-surface p-5 flex items-center gap-3">
-              <Icon className="size-6 text-primary shrink-0" strokeWidth={1.5} />
-              <div>
-                <div className="font-display text-sm">{t}</div>
-                <div className="text-xs text-muted-foreground">{s}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <section className="container-x py-14 md:py-20">
         <div className="grid lg:grid-cols-[320px_1fr] gap-10">
