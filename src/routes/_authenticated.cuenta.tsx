@@ -30,6 +30,8 @@ const ESTADO_COLOR: Record<string, string> = {
   entregado: "bg-success/15 text-success",
   cancelado: "bg-destructive/15 text-destructive",
 };
+const DNI_RE = /^\d{7,9}$/;
+const PHONE_RE = /^\+?\d{8,15}$/;
 
 type ProfileFormValues = {
   nombre?: string | null;
@@ -193,7 +195,22 @@ function CuentaPage() {
 }
 
 function isProfileComplete(profile: ProfileFormValues | null | undefined) {
-  return !!profile?.nombre?.trim() && !!profile?.telefono?.trim() && !!profile?.dni?.trim();
+  return (
+    isNameValid(profile?.nombre) && isPhoneValid(profile?.telefono) && isDniValid(profile?.dni)
+  );
+}
+
+function isNameValid(value: string | null | undefined) {
+  const clean = value?.trim() ?? "";
+  return clean.length >= 2 && clean.length <= 80;
+}
+
+function isPhoneValid(value: string | null | undefined) {
+  return PHONE_RE.test(value?.trim() ?? "");
+}
+
+function isDniValid(value: string | null | undefined) {
+  return DNI_RE.test(value?.trim() ?? "");
 }
 
 function ProfileForm({
@@ -207,10 +224,16 @@ function ProfileForm({
   const [telefono, setTelefono] = useState(initial?.telefono ?? "");
   const [dni, setDni] = useState(initial?.dni ?? "");
   const [busy, setBusy] = useState(false);
+  const nameOk = isNameValid(nombre);
+  const phoneOk = isPhoneValid(telefono);
+  const dniOk = isDniValid(dni);
+  const canSubmit = nameOk && phoneOk && dniOk && !busy;
+
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
+        if (!canSubmit) return;
         setBusy(true);
         try {
           await onSubmit({ nombre, telefono, dni });
@@ -219,13 +242,37 @@ function ProfileForm({
         }
       }}
       className="max-w-md space-y-4"
+      noValidate
     >
-      <Field label="Nombre" value={nombre} onChange={setNombre} required />
-      <Field label="Teléfono" value={telefono} onChange={setTelefono} />
-      <Field label="DNI / CUIT" value={dni} onChange={setDni} />
+      <Field
+        label="Nombre"
+        value={nombre}
+        onChange={(value) => setNombre(value.replace(/[^\p{L}\s'.-]/gu, ""))}
+        required
+        maxLength={80}
+        error={nombre && !nameOk ? "Ingresá tu nombre completo (mínimo 2 caracteres)." : undefined}
+      />
+      <Field
+        label="Teléfono"
+        value={telefono}
+        onChange={(value) => setTelefono(value.replace(/[^\d+]/g, "").slice(0, 16))}
+        required
+        inputMode="tel"
+        placeholder="+5491122334455"
+        error={telefono && !phoneOk ? "Teléfono inválido (8 a 15 dígitos, opcional +)." : undefined}
+      />
+      <Field
+        label="DNI / CUIT"
+        value={dni}
+        onChange={(value) => setDni(value.replace(/\D/g, "").slice(0, 9))}
+        required
+        inputMode="numeric"
+        placeholder="Sin puntos"
+        error={dni && !dniOk ? "El DNI debe tener entre 7 y 9 dígitos." : undefined}
+      />
       <button
-        disabled={busy}
-        className="bg-primary text-primary-foreground px-5 py-2.5 font-display tracking-wide hover:bg-primary/90"
+        disabled={!canSubmit}
+        className="bg-primary text-primary-foreground px-5 py-2.5 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Guardar
       </button>
@@ -325,11 +372,19 @@ function Field({
   value,
   onChange,
   required,
+  inputMode,
+  placeholder,
+  maxLength,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  placeholder?: string;
+  maxLength?: number;
+  error?: string;
 }) {
   return (
     <label className="block">
@@ -340,8 +395,12 @@ function Field({
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         required={required}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        maxLength={maxLength}
         className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
       />
+      {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
     </label>
   );
 }

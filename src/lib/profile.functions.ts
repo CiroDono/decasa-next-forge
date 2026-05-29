@@ -8,7 +8,11 @@ export const getProfile = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const [{ data: profile }, { data: direcciones }, { data: roles }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-      supabase.from("direcciones").select("*").eq("user_id", userId).order("predeterminada", { ascending: false }),
+      supabase
+        .from("direcciones")
+        .select("*")
+        .eq("user_id", userId)
+        .order("predeterminada", { ascending: false }),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
     return {
@@ -20,15 +24,33 @@ export const getProfile = createServerFn({ method: "GET" })
 
 export const updateProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({
-    nombre: z.string().trim().min(1).max(120),
-    telefono: z.string().trim().max(40).optional().nullable(),
-    dni: z.string().trim().max(20).optional().nullable(),
-  }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        nombre: z
+          .string()
+          .trim()
+          .min(2, "Ingresá tu nombre completo.")
+          .max(80, "El nombre es demasiado largo.")
+          .regex(/^[\p{L}\s'.-]+$/u, "El nombre solo puede incluir letras y espacios."),
+        telefono: z
+          .string()
+          .trim()
+          .regex(/^\+?\d{8,15}$/, "Teléfono inválido."),
+        dni: z
+          .string()
+          .trim()
+          .regex(/^\d{7,9}$/, "El DNI debe tener entre 7 y 9 dígitos."),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase.from("profiles").upsert({
-      id: userId, nombre: data.nombre, telefono: data.telefono ?? null, dni: data.dni ?? null,
+      id: userId,
+      nombre: data.nombre,
+      telefono: data.telefono ?? null,
+      dni: data.dni ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
