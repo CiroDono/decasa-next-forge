@@ -3,6 +3,7 @@ type SendEmailParams = {
   subject: string;
   html: string;
   bcc?: string;
+  replyTo?: string;
   logContext?: Record<string, unknown>;
 };
 
@@ -11,6 +12,7 @@ export async function sendTransactionalEmail({
   subject,
   html,
   bcc,
+  replyTo,
   logContext,
 }: SendEmailParams): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -20,8 +22,15 @@ export async function sendTransactionalEmail({
     return false;
   }
 
-  const from = process.env.ORDER_EMAIL_FROM || process.env.AUTH_EMAIL_FROM || "Decasan <onboarding@resend.dev>";
+  const from =
+    process.env.RESEND_FROM_EMAIL || process.env.ORDER_EMAIL_FROM || process.env.AUTH_EMAIL_FROM;
+  if (!from) {
+    console.warn("[email] RESEND_FROM_EMAIL missing. Skipping email.", logContext);
+    return false;
+  }
+
   const defaultBcc = process.env.ORDER_EMAIL_BCC;
+  const defaultReplyTo = process.env.ORDER_EMAIL_REPLY_TO;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -33,6 +42,7 @@ export async function sendTransactionalEmail({
       from,
       to,
       ...(bcc || defaultBcc ? { bcc: bcc ?? defaultBcc } : {}),
+      ...(replyTo || defaultReplyTo ? { reply_to: replyTo ?? defaultReplyTo } : {}),
       subject,
       html,
     }),
