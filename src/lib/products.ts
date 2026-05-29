@@ -28,6 +28,8 @@ export type ProductImageRow = {
 
 export type SortKey = "relevance" | "price-asc" | "price-desc" | "name-asc";
 
+const SEARCH_FIELDS = ["nombre", "sku", "grupo", "categoria", "descripcion"] as const;
+
 export function getPrecioEfectivo(p: Pick<Producto, "precio" | "precio_oferta" | "oferta_hasta">): number {
   const base = Number(p.precio ?? 0);
   if (
@@ -55,42 +57,136 @@ export async function fetchProductos(opts: {
   offset?: number;
 }): Promise<{ items: Producto[]; count: number }> {
   let query = supabase.from("productos").select("*", { count: "exact" });
+  const searchTokens = tokenizeSearch(opts.q);
 
   const normalizedCat = normalizeCategoryName(opts.cat);
   if (normalizedCat) query = query.eq("categoria", normalizedCat);
   if (opts.grupo) query = query.eq("grupo", opts.grupo);
   if (typeof opts.min === "number") query = query.gte("precio", opts.min);
   if (typeof opts.max === "number") query = query.lte("precio", opts.max);
-  if (opts.q) {
-    const safe = opts.q.replace(/[%,()]/g, " ").trim();
-    if (safe) {
-      query = query.or(
-        `nombre.ilike.%${safe}%,categoria.ilike.%${safe}%,grupo.ilike.%${safe}%,descripcion.ilike.%${safe}%,sku.ilike.%${safe}%`,
-      );
-    }
+  if (searchTokens.length) {
+    const clauses = buildQueryTokens(opts.q).flatMap((token) =>
+      SEARCH_FIELDS.map((field) => `${field}.ilike.%${escapePostgrestLike(token)}%`),
+    );
+    query = query.or(clauses.join(","));
   }
 
-  switch (opts.sort) {
-    case "price-asc":
-      query = query.order("precio", { ascending: true, nullsFirst: false });
-      break;
-    case "price-desc":
-      query = query.order("precio", { ascending: false, nullsFirst: false });
-      break;
-    case "name-asc":
-      query = query.order("nombre", { ascending: true });
-      break;
-    default:
-      query = query.order("id", { ascending: true });
+  if (!searchTokens.length || opts.sort !== "relevance") {
+    switch (opts.sort) {
+      case "price-asc":
+        query = query.order("precio", { ascending: true, nullsFirst: false });
+        break;
+      case "price-desc":
+        query = query.order("precio", { ascending: false, nullsFirst: false });
+        break;
+      case "name-asc":
+        query = query.order("nombre", { ascending: true });
+        break;
+      default:
+        query = query.order("id", { ascending: true });
+    }
   }
 
   const limit = opts.limit ?? 24;
   const offset = opts.offset ?? 0;
-  query = query.range(offset, offset + limit - 1);
+  if (searchTokens.length) {
+    query = query.limit(Math.max(offset + limit, 120));
+  } else {
+    query = query.range(offset, offset + limit - 1);
+  }
 
   const { data, count, error } = await query;
   if (error) throw error;
-  return { items: (data ?? []) as Producto[], count: count ?? 0 };
+  const rows = (data ?? []) as Producto[];
+
+  if (!searchTokens.length) {
+    return { items: rows, count: count ?? 0 };
+  }
+
+  const ranked = rows
+    .map((item) => ({ item, score: scoreProductSearch(item, searchTokens) }))
+    .filter((entry) => entry.score > 0);
+
+  switch (opts.sort) {
+    case "price-asc":
+      ranked.sort((a, b) => getPrecioEfectivo(a.item) - getPrecioEfectivo(b.item) || b.score - a.score);
+      break;
+    case "price-desc":
+      ranked.sort((a, b) => getPrecioEfectivo(b.item) - getPrecioEfectivo(a.item) || b.score - a.score);
+      break;
+    case "name-asc":
+      ranked.sort((a, b) => (a.item.nombre ?? "").localeCompare(b.item.nombre ?? "", "es"));
+      break;
+    default:
+      ranked.sort(
+        (a, b) =>
+          b.score - a.score ||
+          Number(b.item.stock ?? 0) - Number(a.item.stock ?? 0) ||
+          (a.item.nombre ?? "").localeCompare(b.item.nombre ?? "", "es"),
+      );
+  }
+
+  return {
+    items: ranked.slice(offset, offset + limit).map((entry) => entry.item),
+    count: ranked.length,
+  };
+}
+
+function tokenizeSearch(q?: string) {
+  return normalizeSearch(q)
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+}
+
+function buildQueryTokens(q?: string) {
+  const rawTokens = (q ?? "")
+    .toLowerCase()
+    .replace(/[%,()]/g, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+  return Array.from(new Set([...rawTokens, ...tokenizeSearch(q)]));
+}
+
+function normalizeSearch(value?: string | null) {
+  return (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function escapePostgrestLike(value: string) {
+  return value.replace(/[%,()]/g, " ").trim();
+}
+
+function scoreProductSearch(product: Producto, tokens: string[]) {
+  const name = normalizeSearch(product.nombre);
+  const sku = normalizeSearch(product.sku);
+  const group = normalizeSearch(product.grupo);
+  const category = normalizeSearch(product.categoria);
+  const description = normalizeSearch(product.descripcion);
+  let total = 0;
+
+  for (const token of tokens) {
+    let tokenScore = 0;
+    if (name === token) tokenScore = Math.max(tokenScore, 1200);
+    if (name.split(" ").some((word) => word === token)) tokenScore = Math.max(tokenScore, 1000);
+    if (name.split(" ").some((word) => word.startsWith(token))) tokenScore = Math.max(tokenScore, 850);
+    if (name.includes(token)) tokenScore = Math.max(tokenScore, 700);
+    if (sku === token) tokenScore = Math.max(tokenScore, 650);
+    if (sku.includes(token)) tokenScore = Math.max(tokenScore, 500);
+    if (group.includes(token)) tokenScore = Math.max(tokenScore, 280);
+    if (category.includes(token)) tokenScore = Math.max(tokenScore, 220);
+    if (description.includes(token)) tokenScore = Math.max(tokenScore, 60);
+    if (!tokenScore) return 0;
+    total += tokenScore;
+  }
+
+  if (name.includes(tokens.join(" "))) total += 500;
+  return total;
 }
 
 export async function fetchProducto(id: number): Promise<Producto | null> {
