@@ -34,8 +34,8 @@ export function Layout({ children }: { children: ReactNode }) {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
-            <Link to="/faq" className="hover:text-primary">Catálogo</Link>
-            <Link to="/productos" className="hover:text-primary">Nosotros</Link>
+            <Link to="/productos" className="hover:text-primary">Catálogo</Link>
+            <Link to="/faq" className="hover:text-primary">Preguntas frecuentes</Link>
             {isAdmin && (
               <Link to="/admin" className="text-primary hover:text-primary/80 flex items-center gap-1">
                 <Shield className="size-4" /> Admin
