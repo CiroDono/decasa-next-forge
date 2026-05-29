@@ -61,7 +61,7 @@ function FaqPage() {
                 Ver catalogo <ArrowRight className="size-4" />
               </Link>
               <a
-                href="https://wa.me/5493548403666"
+                href="https://wa.me/54 3548 59-2127"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 border border-white/20 px-6 py-3 font-display tracking-wide hover:border-primary hover:text-primary transition"
