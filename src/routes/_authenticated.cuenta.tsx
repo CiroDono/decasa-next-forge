@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Plus, Trash2, MapPin, Package } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import {
-  getProfile, updateProfile, addDireccion, deleteDireccion, getMyOrders,
+  getProfile,
+  updateProfile,
+  addDireccion,
+  deleteDireccion,
+  getMyOrders,
 } from "@/lib/profile.functions";
 import { formatARS } from "@/lib/format";
 
@@ -27,6 +31,24 @@ const ESTADO_COLOR: Record<string, string> = {
   cancelado: "bg-destructive/15 text-destructive",
 };
 
+type ProfileFormValues = {
+  nombre?: string | null;
+  telefono?: string | null;
+  dni?: string | null;
+};
+
+type DireccionFormValues = {
+  etiqueta: string;
+  calle: string;
+  numero: string;
+  piso: string;
+  ciudad: string;
+  provincia: string;
+  codigo_postal: string;
+  telefono: string;
+  predeterminada: boolean;
+};
+
 function CuentaPage() {
   const qc = useQueryClient();
   const profileFn = useServerFn(getProfile);
@@ -39,6 +61,11 @@ function CuentaPage() {
   const orders = useQuery({ queryKey: ["orders"], queryFn: () => ordersFn() });
 
   const [tab, setTab] = useState<"pedidos" | "perfil" | "direcciones">("pedidos");
+  const missingProfileData = !!profile.data && !isProfileComplete(profile.data.profile);
+
+  useEffect(() => {
+    if (missingProfileData) setTab("perfil");
+  }, [missingProfileData]);
 
   return (
     <Layout>
@@ -47,6 +74,11 @@ function CuentaPage() {
         {profile.data?.profile?.nombre && (
           <p className="text-sm text-muted-foreground mb-8">Hola, {profile.data.profile.nombre}</p>
         )}
+        {missingProfileData && (
+          <div className="mb-6 border border-primary/30 bg-primary/5 p-4 text-sm">
+            Completá tus datos para poder comprar y recibir novedades de tus pedidos.
+          </div>
+        )}
 
         <div className="flex border-b border-border mb-8">
           {(["pedidos", "perfil", "direcciones"] as const).map((t) => (
@@ -54,7 +86,9 @@ function CuentaPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`px-4 py-3 text-sm font-medium capitalize border-b-2 -mb-px ${
-                tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                tab === t
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               {t}
@@ -75,7 +109,9 @@ function CuentaPage() {
               <div key={p.id} className="border border-border p-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div>
-                    <div className="font-mono text-xs text-muted-foreground">#{p.id.slice(0, 8)}</div>
+                    <div className="font-mono text-xs text-muted-foreground">
+                      #{p.id.slice(0, 8)}
+                    </div>
                     <div className="text-sm">{new Date(p.created_at).toLocaleString("es-AR")}</div>
                   </div>
                   <span className={`px-2 py-1 text-xs font-medium ${ESTADO_COLOR[p.estado]}`}>
@@ -85,7 +121,9 @@ function CuentaPage() {
                 </div>
                 <ul className="mt-3 text-sm text-muted-foreground space-y-1">
                   {p.pedido_items?.map((it) => (
-                    <li key={it.id}>{it.cantidad}× {it.nombre}</li>
+                    <li key={it.id}>
+                      {it.cantidad}× {it.nombre}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -107,17 +145,33 @@ function CuentaPage() {
         {tab === "direcciones" && (
           <div className="space-y-4">
             {profile.data?.direcciones.map((d) => (
-              <div key={d.id} className="border border-border p-4 flex items-start justify-between gap-4">
+              <div
+                key={d.id}
+                className="border border-border p-4 flex items-start justify-between gap-4"
+              >
                 <div className="flex gap-3">
                   <MapPin className="size-5 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-medium">{d.etiqueta || "Dirección"} {d.predeterminada && <span className="text-xs text-primary">(predeterminada)</span>}</div>
-                    <div className="text-sm text-muted-foreground">{d.calle} {d.numero} {d.piso}, {d.ciudad}, {d.provincia} (CP {d.codigo_postal})</div>
-                    {d.telefono && <div className="text-xs text-muted-foreground mt-1">Tel: {d.telefono}</div>}
+                    <div className="font-medium">
+                      {d.etiqueta || "Dirección"}{" "}
+                      {d.predeterminada && (
+                        <span className="text-xs text-primary">(predeterminada)</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {d.calle} {d.numero} {d.piso}, {d.ciudad}, {d.provincia} (CP {d.codigo_postal}
+                      )
+                    </div>
+                    {d.telefono && (
+                      <div className="text-xs text-muted-foreground mt-1">Tel: {d.telefono}</div>
+                    )}
                   </div>
                 </div>
                 <button
-                  onClick={async () => { await delDirFn({ data: { id: d.id } }); qc.invalidateQueries({ queryKey: ["profile"] }); }}
+                  onClick={async () => {
+                    await delDirFn({ data: { id: d.id } });
+                    qc.invalidateQueries({ queryKey: ["profile"] });
+                  }}
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="size-4" />
@@ -138,64 +192,156 @@ function CuentaPage() {
   );
 }
 
-function ProfileForm({ initial, onSubmit }: { initial: any; onSubmit: (v: any) => Promise<void> }) {
+function isProfileComplete(profile: ProfileFormValues | null | undefined) {
+  return !!profile?.nombre?.trim() && !!profile?.telefono?.trim() && !!profile?.dni?.trim();
+}
+
+function ProfileForm({
+  initial,
+  onSubmit,
+}: {
+  initial: ProfileFormValues | null;
+  onSubmit: (v: ProfileFormValues) => Promise<void>;
+}) {
   const [nombre, setNombre] = useState(initial?.nombre ?? "");
   const [telefono, setTelefono] = useState(initial?.telefono ?? "");
   const [dni, setDni] = useState(initial?.dni ?? "");
   const [busy, setBusy] = useState(false);
   return (
     <form
-      onSubmit={async (e) => { e.preventDefault(); setBusy(true); try { await onSubmit({ nombre, telefono, dni }); } finally { setBusy(false); } }}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+          await onSubmit({ nombre, telefono, dni });
+        } finally {
+          setBusy(false);
+        }
+      }}
       className="max-w-md space-y-4"
     >
       <Field label="Nombre" value={nombre} onChange={setNombre} required />
       <Field label="Teléfono" value={telefono} onChange={setTelefono} />
       <Field label="DNI / CUIT" value={dni} onChange={setDni} />
-      <button disabled={busy} className="bg-primary text-primary-foreground px-5 py-2.5 font-display tracking-wide hover:bg-primary/90">
+      <button
+        disabled={busy}
+        className="bg-primary text-primary-foreground px-5 py-2.5 font-display tracking-wide hover:bg-primary/90"
+      >
         Guardar
       </button>
     </form>
   );
 }
 
-function DireccionForm({ onSubmit }: { onSubmit: (v: any) => Promise<void> }) {
+function DireccionForm({ onSubmit }: { onSubmit: (v: DireccionFormValues) => Promise<void> }) {
   const [open, setOpen] = useState(false);
-  const [v, setV] = useState({ etiqueta: "", calle: "", numero: "", piso: "", ciudad: "", provincia: "", codigo_postal: "", telefono: "", predeterminada: false });
-  if (!open) return (
-    <button onClick={() => setOpen(true)} className="border border-dashed border-border p-4 w-full text-sm text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center gap-2">
-      <Plus className="size-4" /> Agregar dirección
-    </button>
-  );
+  const [v, setV] = useState({
+    etiqueta: "",
+    calle: "",
+    numero: "",
+    piso: "",
+    ciudad: "",
+    provincia: "",
+    codigo_postal: "",
+    telefono: "",
+    predeterminada: false,
+  });
+  if (!open)
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="border border-dashed border-border p-4 w-full text-sm text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center gap-2"
+      >
+        <Plus className="size-4" /> Agregar dirección
+      </button>
+    );
   return (
     <form
-      onSubmit={async (e) => { e.preventDefault(); await onSubmit(v); setOpen(false); setV({ etiqueta: "", calle: "", numero: "", piso: "", ciudad: "", provincia: "", codigo_postal: "", telefono: "", predeterminada: false }); }}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        await onSubmit(v);
+        setOpen(false);
+        setV({
+          etiqueta: "",
+          calle: "",
+          numero: "",
+          piso: "",
+          ciudad: "",
+          provincia: "",
+          codigo_postal: "",
+          telefono: "",
+          predeterminada: false,
+        });
+      }}
       className="border border-border p-4 grid sm:grid-cols-2 gap-3"
     >
-      <Field label="Etiqueta (Casa, Trabajo)" value={v.etiqueta} onChange={(x) => setV({ ...v, etiqueta: x })} />
+      <Field
+        label="Etiqueta (Casa, Trabajo)"
+        value={v.etiqueta}
+        onChange={(x) => setV({ ...v, etiqueta: x })}
+      />
       <Field label="Teléfono" value={v.telefono} onChange={(x) => setV({ ...v, telefono: x })} />
       <Field label="Calle" value={v.calle} onChange={(x) => setV({ ...v, calle: x })} required />
       <Field label="Número" value={v.numero} onChange={(x) => setV({ ...v, numero: x })} />
       <Field label="Piso/Depto" value={v.piso} onChange={(x) => setV({ ...v, piso: x })} />
-      <Field label="Código postal" value={v.codigo_postal} onChange={(x) => setV({ ...v, codigo_postal: x })} required />
+      <Field
+        label="Código postal"
+        value={v.codigo_postal}
+        onChange={(x) => setV({ ...v, codigo_postal: x })}
+        required
+      />
       <Field label="Ciudad" value={v.ciudad} onChange={(x) => setV({ ...v, ciudad: x })} required />
-      <Field label="Provincia" value={v.provincia} onChange={(x) => setV({ ...v, provincia: x })} required />
+      <Field
+        label="Provincia"
+        value={v.provincia}
+        onChange={(x) => setV({ ...v, provincia: x })}
+        required
+      />
       <label className="flex items-center gap-2 text-sm sm:col-span-2">
-        <input type="checkbox" checked={v.predeterminada} onChange={(e) => setV({ ...v, predeterminada: e.target.checked })} />
+        <input
+          type="checkbox"
+          checked={v.predeterminada}
+          onChange={(e) => setV({ ...v, predeterminada: e.target.checked })}
+        />
         Usar como predeterminada
       </label>
       <div className="sm:col-span-2 flex gap-2">
-        <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 text-sm font-medium">Guardar</button>
-        <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 text-sm">Cancelar</button>
+        <button
+          type="submit"
+          className="bg-primary text-primary-foreground px-4 py-2 text-sm font-medium"
+        >
+          Guardar
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 text-sm">
+          Cancelar
+        </button>
       </div>
     </form>
   );
 }
 
-function Field({ label, value, onChange, required }: { label: string; value: string; onChange: (v: string) => void; required?: boolean }) {
+function Field({
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
   return (
     <label className="block">
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input value={value ?? ""} onChange={(e) => onChange(e.target.value)} required={required} className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <input
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+      />
     </label>
   );
 }

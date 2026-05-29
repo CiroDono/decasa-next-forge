@@ -1,11 +1,16 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Eye, EyeOff, Check, X } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
-import { canonicalGmail, checkGmailAvailability, sendLoginSuccessEmail } from "@/lib/auth.functions";
+import {
+  canonicalGmail,
+  checkGmailAvailability,
+  sendLoginSuccessEmail,
+} from "@/lib/auth.functions";
+import { useSession } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -21,13 +26,17 @@ const PHONE_RE = /^\+?\d{8,15}$/;
 
 function translateAuthError(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes("email not confirmed")) return "Tenés que confirmar tu email antes de ingresar. Revisá tu casilla (y Spam).";
+  if (m.includes("email not confirmed"))
+    return "Tenés que confirmar tu email antes de ingresar. Revisá tu casilla (y Spam).";
   if (m.includes("invalid login credentials")) return "Email o contraseña incorrectos.";
-  if (m.includes("user already registered") || m.includes("already registered")) return "Ya existe una cuenta con ese email. Iniciá sesión.";
+  if (m.includes("user already registered") || m.includes("already registered"))
+    return "Ya existe una cuenta con ese email. Iniciá sesión.";
   if (m.includes("duplicate key") && m.includes("dni")) return "Ya existe una cuenta con ese DNI.";
   if (m.includes("rate limit")) return "Demasiados intentos. Esperá unos minutos.";
-  if (m.includes("password should be at least")) return "La contraseña debe tener al menos 8 caracteres.";
-  if (m.includes("invalid email") || m.includes("unable to validate email")) return "El email no es válido.";
+  if (m.includes("password should be at least"))
+    return "La contraseña debe tener al menos 8 caracteres.";
+  if (m.includes("invalid email") || m.includes("unable to validate email"))
+    return "El email no es válido.";
   if (m.includes("signup is disabled")) return "El registro está deshabilitado temporalmente.";
   if (m.includes("network")) return "Error de red. Verificá tu conexión.";
   return msg;
@@ -36,7 +45,8 @@ function translateAuthError(msg: string): string {
 function LoginPage() {
   const search = useSearch({ from: "/login" });
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "register">(search.mode);
+  const { user, loading: sessionLoading } = useSession();
+  const [mode, setMode] = useState<"login" | "register">(search.mode as "login" | "register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -45,15 +55,26 @@ function LoginPage() {
   const [telefono, setTelefono] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState<string | null>(null);
+  const handledSessionRef = useRef(false);
   const checkEmailFn = useServerFn(checkGmailAvailability);
   const sendLoginEmailFn = useServerFn(sendLoginSuccessEmail);
 
-  const passChecks = useMemo(() => ({
-    len: password.length >= 8,
-    lower: /[a-z]/.test(password),
-    upper: /[A-Z]/.test(password),
-    num: /\d/.test(password),
-  }), [password]);
+  useEffect(() => {
+    if (sessionLoading || !user || handledSessionRef.current) return;
+    handledSessionRef.current = true;
+    sendLoginEmailFn().catch(() => null);
+    navigate({ to: search.redirect });
+  }, [sessionLoading, user, navigate, search.redirect, sendLoginEmailFn]);
+
+  const passChecks = useMemo(
+    () => ({
+      len: password.length >= 8,
+      lower: /[a-z]/.test(password),
+      upper: /[A-Z]/.test(password),
+      num: /\d/.test(password),
+    }),
+    [password],
+  );
   const passOk = passChecks.len && passChecks.lower && passChecks.upper && passChecks.num;
 
   const emailOk = GMAIL_RE.test(email.trim());
@@ -61,9 +82,10 @@ function LoginPage() {
   const phoneOk = PHONE_RE.test(telefono);
   const nameOk = nombre.trim().length >= 2 && nombre.trim().length <= 80;
 
-  const canSubmit = mode === "login"
-    ? emailOk && password.length >= 8
-    : emailOk && nameOk && dniOk && phoneOk && passOk;
+  const canSubmit =
+    mode === "login"
+      ? emailOk && password.length >= 8
+      : emailOk && nameOk && dniOk && phoneOk && passOk;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +94,8 @@ function LoginPage() {
     setNeedsConfirm(null);
     try {
       if (mode === "register") {
-        if (!GMAIL_RE.test(email.trim())) throw new Error("El email debe ser una cuenta de Gmail (@gmail.com).");
+        if (!GMAIL_RE.test(email.trim()))
+          throw new Error("El email debe ser una cuenta de Gmail (@gmail.com).");
         if (!DNI_RE.test(dni)) throw new Error("El DNI debe tener entre 7 y 9 dígitos.");
         if (!PHONE_RE.test(telefono)) throw new Error("Teléfono inválido.");
         if (!passOk) throw new Error("La contraseña no cumple los requisitos.");
@@ -80,14 +103,21 @@ function LoginPage() {
         const normalizedEmail = email.trim().toLowerCase();
         const availability = await checkEmailFn({ data: { email: normalizedEmail } });
         if (!availability.available) {
-          throw new Error("Ya existe una cuenta con ese Gmail. Iniciá sesión o recuperá tu contraseña.");
+          throw new Error(
+            "Ya existe una cuenta con ese Gmail. Iniciá sesión o recuperá tu contraseña.",
+          );
         }
 
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
-            data: { nombre: nombre.trim(), dni, telefono, email_canonical: canonicalGmail(normalizedEmail) },
+            data: {
+              nombre: nombre.trim(),
+              dni,
+              telefono,
+              email_canonical: canonicalGmail(normalizedEmail),
+            },
             emailRedirectTo: window.location.origin,
           },
         });
@@ -97,7 +127,6 @@ function LoginPage() {
           toast.success("Cuenta creada. Te enviamos un email para confirmarla.");
           setMode("login");
         } else {
-          await sendLoginEmailFn().catch(() => null);
           toast.success("Bienvenido");
           navigate({ to: search.redirect });
         }
@@ -107,7 +136,6 @@ function LoginPage() {
           password,
         });
         if (error) throw error;
-        await sendLoginEmailFn().catch(() => null);
         toast.success("Bienvenido");
         navigate({ to: search.redirect });
       }
@@ -143,12 +171,36 @@ function LoginPage() {
     else toast.success("Te enviamos un email para restablecer la contraseña");
   }
 
-  const inputCls = "w-full mt-1 border border-border bg-background px-3 py-2.5 outline-none focus:border-primary";
+  async function handleGoogleLogin() {
+    if (loading) return;
+    setLoading(true);
+    setNeedsConfirm(null);
+    const redirectTo = `${window.location.origin}/login?redirect=${encodeURIComponent(search.redirect)}`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: "offline",
+          prompt: "select_account",
+        },
+      },
+    });
+    if (error) {
+      setLoading(false);
+      toast.error(translateAuthError(error.message));
+    }
+  }
+
+  const inputCls =
+    "w-full mt-1 border border-border bg-background px-3 py-2.5 outline-none focus:border-primary";
 
   return (
     <Layout>
       <div className="container-x max-w-md py-16">
-        <h1 className="font-display text-3xl mb-2">{mode === "login" ? "Ingresar" : "Crear cuenta"}</h1>
+        <h1 className="font-display text-3xl mb-2">
+          {mode === "login" ? "Ingresar" : "Crear cuenta"}
+        </h1>
         <p className="text-sm text-muted-foreground mb-8">
           {mode === "login"
             ? "Accedé para ver tus pedidos y comprar."
@@ -158,7 +210,8 @@ function LoginPage() {
         {needsConfirm && (
           <div className="mb-6 border border-border bg-muted/40 p-3 text-sm">
             <p className="mb-2">
-              Aún no confirmaste el email <strong>{needsConfirm}</strong>. Revisá tu bandeja y la carpeta de Spam.
+              Aún no confirmaste el email <strong>{needsConfirm}</strong>. Revisá tu bandeja y la
+              carpeta de Spam.
             </p>
             <button
               type="button"
@@ -170,6 +223,21 @@ function LoginPage() {
             </button>
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="mb-5 w-full border border-border bg-background py-3 font-medium hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Continuar con Google
+        </button>
+
+        <div className="mb-5 flex items-center gap-3 text-xs uppercase text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          <span>o</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {mode === "register" && (
@@ -184,7 +252,11 @@ function LoginPage() {
                   maxLength={80}
                   className={inputCls}
                 />
-                {nombre && !nameOk && <p className="text-xs text-destructive mt-1">Ingresá tu nombre completo (mínimo 2 caracteres).</p>}
+                {nombre && !nameOk && (
+                  <p className="text-xs text-destructive mt-1">
+                    Ingresá tu nombre completo (mínimo 2 caracteres).
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium">DNI</label>
@@ -197,7 +269,11 @@ function LoginPage() {
                   className={inputCls}
                   placeholder="Sin puntos"
                 />
-                {dni && !dniOk && <p className="text-xs text-destructive mt-1">El DNI debe tener entre 7 y 9 dígitos.</p>}
+                {dni && !dniOk && (
+                  <p className="text-xs text-destructive mt-1">
+                    El DNI debe tener entre 7 y 9 dígitos.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium">Teléfono</label>
@@ -210,7 +286,11 @@ function LoginPage() {
                   className={inputCls}
                   placeholder="+5491122334455"
                 />
-                {telefono && !phoneOk && <p className="text-xs text-destructive mt-1">Teléfono inválido (8 a 15 dígitos, opcional +).</p>}
+                {telefono && !phoneOk && (
+                  <p className="text-xs text-destructive mt-1">
+                    Teléfono inválido (8 a 15 dígitos, opcional +).
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -225,7 +305,9 @@ function LoginPage() {
               className={inputCls}
               placeholder="tuusuario@gmail.com"
             />
-            {email && !emailOk && <p className="text-xs text-destructive mt-1">Solo se aceptan cuentas @gmail.com.</p>}
+            {email && !emailOk && (
+              <p className="text-xs text-destructive mt-1">Solo se aceptan cuentas @gmail.com.</p>
+            )}
           </div>
           <div>
             <label className="text-sm font-medium">Contraseña</label>
@@ -268,18 +350,32 @@ function LoginPage() {
         <div className="mt-6 flex items-center justify-between text-sm">
           <button
             type="button"
-            onClick={() => { setMode(mode === "login" ? "register" : "login"); setNeedsConfirm(null); }}
-            className={mode === "login" ? "border border-black px-3 py-1 hover:bg-black hover:text-white transition" : "text-primary hover:underline"}
+            onClick={() => {
+              setMode(mode === "login" ? "register" : "login");
+              setNeedsConfirm(null);
+            }}
+            className={
+              mode === "login"
+                ? "border border-black px-3 py-1 hover:bg-black hover:text-white transition"
+                : "text-primary hover:underline"
+            }
           >
             {mode === "login" ? "Crear cuenta nueva" : "Ya tengo cuenta"}
           </button>
           {mode === "login" && (
-            <button type="button" onClick={handleReset} className="border border-black px-3 py-1 hover:bg-black hover:text-white transition">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="border border-black px-3 py-1 hover:bg-black hover:text-white transition"
+            >
               Olvidé mi contraseña
             </button>
           )}
         </div>
-        <Link to="/" className="inline-block text-center mt-8 text-xs border border-black px-3 py-1 hover:bg-black hover:text-white transition">
+        <Link
+          to="/"
+          className="inline-block text-center mt-8 text-xs border border-black px-3 py-1 hover:bg-black hover:text-white transition"
+        >
           ← Volver al inicio
         </Link>
       </div>
