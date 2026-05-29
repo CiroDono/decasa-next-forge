@@ -99,13 +99,14 @@ export function ShippingCalculator({
         {shippingOptions.map((opcion) => (
           <label
             key={opcion.codigo_servicio}
-            className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition"
+            className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition has-disabled:cursor-not-allowed has-disabled:opacity-70"
           >
             <input
               type="radio"
               name="shipping"
               value={opcion.codigo_servicio}
               checked={localSelected === opcion.codigo_servicio}
+              disabled={opcion.tipo === "sucursal" && opcion.precio === 0}
               onChange={(e) => {
                 setLocalSelected(e.target.value);
                 onShippingSelect?.(opcion);
@@ -119,7 +120,11 @@ export function ShippingCalculator({
                 {opcion.descripcion}
               </p>
               <p className="text-xs text-muted-foreground">
-                {opcion.dias_habiles === 0 ? "Sin costo de envio" : `${opcion.dias_habiles} dias habiles`}
+                {opcion.tipo === "sucursal" && opcion.precio === 0
+                  ? "Sucursal disponible para referencia"
+                  : opcion.dias_habiles === 0
+                    ? "Sin costo de envio"
+                    : `${opcion.dias_habiles} dias habiles`}
               </p>
               {opcion.sucursal && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -135,7 +140,9 @@ export function ShippingCalculator({
                 <p className="text-xs text-muted-foreground mt-1">{opcion.sucursal.horario}</p>
               )}
             </div>
-            <p className="font-semibold text-sm">{formatARS(opcion.precio)}</p>
+            <p className="font-semibold text-sm">
+              {opcion.tipo === "sucursal" && opcion.precio === 0 ? "A cotizar" : formatARS(opcion.precio)}
+            </p>
           </label>
         ))}
       </div>

@@ -144,17 +144,7 @@ export async function selectShippingOption(
   }
 
   if (codigoServicio.startsWith("andreani-sucursal:")) {
-    const [homeOptions, pickupBranches] = await Promise.all([
-      quoteAndreaniShipping(params),
-      getAndreaniPickupBranches(params.destino_codigo_postal),
-    ]);
-    const selected = buildPickupBranchOptions(pickupBranches, homeOptions).find(
-      (option) => option.codigo_servicio === codigoServicio,
-    );
-    if (!selected) {
-      throw new Error("La sucursal seleccionada ya no esta disponible");
-    }
-    return selected;
+    throw new Error("El retiro en sucursal Andreani todavia no tiene tarifa final disponible");
   }
 
   const options = await quoteAndreaniShipping(params);
@@ -243,14 +233,13 @@ function hasUsableCredentials(username: string, password: string): boolean {
 
 function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: ShippingOption[]): ShippingOption[] {
   const reference = homeOptions.find((option) => option.precio > 0) ?? homeOptions[0];
-  const price = reference ? reference.precio : 0;
   const days = reference ? reference.dias_habiles : 5;
 
   return branches.slice(0, 5).map((branch) => ({
     servicio: "Retiro en sucursal Andreani",
     descripcion: `Retiro en sucursal - ${branch.nombre}`,
     dias_habiles: days,
-    precio: price,
+    precio: 0,
     codigo_servicio: `andreani-sucursal:${branch.id}`,
     tipo: "sucursal" as const,
     sucursal: branch,
@@ -258,10 +247,10 @@ function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: Shippin
 }
 
 function normalizePickupBranch(raw: any): PickupBranch | null {
-  const id = String(raw.id ?? raw.code ?? raw.codigo ?? raw.agency_id ?? raw.sucursalId ?? raw.nomenclatura ?? "").trim();
-  const nombre = String(raw.name ?? raw.nombre ?? raw.description ?? raw.descripcion ?? "Sucursal Andreani").trim();
-  const street = raw.address ?? raw.direccion ?? raw.street ?? raw.calle ?? raw.domicilio?.calle;
-  const number = raw.number ?? raw.numero ?? raw.domicilio?.numero;
+  const id = asText(raw.id ?? raw.code ?? raw.codigo ?? raw.agency_id ?? raw.sucursalId ?? raw.nomenclatura);
+  const nombre = asText(raw.name ?? raw.nombre ?? raw.description ?? raw.descripcion) || "Sucursal Andreani";
+  const street = asText(raw.address ?? raw.direccion ?? raw.street ?? raw.calle ?? raw.domicilio?.calle);
+  const number = asText(raw.number ?? raw.numero ?? raw.domicilio?.numero);
   const direccion = [street, number].filter(Boolean).join(" ").trim();
 
   if (!id || !direccion) return null;
@@ -270,11 +259,35 @@ function normalizePickupBranch(raw: any): PickupBranch | null {
     id,
     nombre,
     direccion,
-    localidad: raw.city ?? raw.localidad ?? raw.town ?? raw.domicilio?.localidad ?? undefined,
-    provincia: raw.state ?? raw.provincia ?? raw.province ?? raw.domicilio?.provincia ?? undefined,
-    codigo_postal: raw.postal_code ?? raw.codigo_postal ?? raw.zipCode ?? raw.domicilio?.codigoPostal ?? undefined,
-    horario: raw.business_hours ?? raw.horario ?? raw.opening_hours ?? undefined,
+    localidad: asText(raw.city ?? raw.localidad ?? raw.town ?? raw.domicilio?.localidad) || undefined,
+    provincia: asText(raw.state ?? raw.provincia ?? raw.province ?? raw.domicilio?.provincia) || undefined,
+    codigo_postal: asText(raw.postal_code ?? raw.codigo_postal ?? raw.zipCode ?? raw.domicilio?.codigoPostal) || undefined,
+    horario: asText(raw.business_hours ?? raw.horario ?? raw.opening_hours) || undefined,
   };
+}
+
+function asText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value).trim();
+  }
+  if (Array.isArray(value)) {
+    return value.map(asText).filter(Boolean).join(", ");
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return asText(
+      record.descripcion ??
+        record.nombre ??
+        record.name ??
+        record.localidad ??
+        record.provincia ??
+        record.calle ??
+        record.codigo ??
+        "",
+    );
+  }
+  return "";
 }
 
 function getDefaultShippingOptions(peso: number): ShippingOption[] {
