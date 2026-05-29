@@ -182,23 +182,30 @@ export function getLocalPickupOption(): ShippingOption {
 }
 
 async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBranch[]> {
-  const baseUrl = process.env.ANDREANI_BRANCHES_URL || "";
+  const username = process.env.ANDREANI_USERNAME || "";
+  const password = process.env.ANDREANI_PASSWORD || "";
+  const baseUrl = process.env.ANDREANI_BRANCHES_URL || "https://apis.andreani.com/v2/sucursales";
 
-  if (!baseUrl) {
-    console.warn("[shipping] Andreani branches URL missing. Skipping pickup branches.");
+  if (!username || !password) {
+    console.warn("[shipping] Andreani credentials missing. Skipping pickup branches.");
     return [];
   }
 
   try {
     const cp = normalizePostalCode(codigoPostal);
+    const token = await getAndreaniToken(username, password);
     const url = new URL(baseUrl);
     url.searchParams.set("postal_code", cp);
     url.searchParams.set("postalCode", cp);
     url.searchParams.set("zipCode", cp);
+    url.searchParams.set("codigoPostal", cp);
 
     const response = await fetch(url, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "x-authorization-token": token,
+      },
     });
 
     if (!response.ok) {
@@ -210,7 +217,7 @@ async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBr
     }
 
     const data = await response.json();
-    const rawBranches = data?.agencies ?? data?.sucursales ?? data?.resultado ?? data?.data ?? data;
+    const rawBranches = data?.agencies ?? data?.sucursales ?? data?.resultado ?? data?.data ?? data?.items ?? data;
     if (!Array.isArray(rawBranches)) return [];
 
     return rawBranches.map(normalizePickupBranch).filter((branch): branch is PickupBranch => Boolean(branch));
@@ -237,10 +244,10 @@ function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: Shippin
 }
 
 function normalizePickupBranch(raw: any): PickupBranch | null {
-  const id = String(raw.id ?? raw.code ?? raw.codigo ?? raw.agency_id ?? raw.sucursalId ?? "").trim();
+  const id = String(raw.id ?? raw.code ?? raw.codigo ?? raw.agency_id ?? raw.sucursalId ?? raw.nomenclatura ?? "").trim();
   const nombre = String(raw.name ?? raw.nombre ?? raw.description ?? raw.descripcion ?? "Sucursal Andreani").trim();
-  const street = raw.address ?? raw.direccion ?? raw.street ?? raw.calle;
-  const number = raw.number ?? raw.numero;
+  const street = raw.address ?? raw.direccion ?? raw.street ?? raw.calle ?? raw.domicilio?.calle;
+  const number = raw.number ?? raw.numero ?? raw.domicilio?.numero;
   const direccion = [street, number].filter(Boolean).join(" ").trim();
 
   if (!id || !direccion) return null;
@@ -249,9 +256,9 @@ function normalizePickupBranch(raw: any): PickupBranch | null {
     id,
     nombre,
     direccion,
-    localidad: raw.city ?? raw.localidad ?? raw.town ?? undefined,
-    provincia: raw.state ?? raw.provincia ?? raw.province ?? undefined,
-    codigo_postal: raw.postal_code ?? raw.codigo_postal ?? raw.zipCode ?? undefined,
+    localidad: raw.city ?? raw.localidad ?? raw.town ?? raw.domicilio?.localidad ?? undefined,
+    provincia: raw.state ?? raw.provincia ?? raw.province ?? raw.domicilio?.provincia ?? undefined,
+    codigo_postal: raw.postal_code ?? raw.codigo_postal ?? raw.zipCode ?? raw.domicilio?.codigoPostal ?? undefined,
     horario: raw.business_hours ?? raw.horario ?? raw.opening_hours ?? undefined,
   };
 }

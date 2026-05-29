@@ -16,6 +16,7 @@ ANDREANI_DESTINATION_CITY=
 ANDREANI_DEFAULT_DELIVERY_DAYS=5
 ANDREANI_LOGIN_URL=https://apis.andreani.com/login
 ANDREANI_QUOTE_URL=https://apis.andreanigloballpack.com/cotizador-globallpack/api/v1/Cotizador
+ANDREANI_BRANCHES_URL=https://apis.andreani.com/v2/sucursales
 
 SHIPPING_ORIGIN_CP=5172
 SHIPPING_ORIGIN_CITY="La Falda"
@@ -27,7 +28,7 @@ SHIPPING_FALLBACK_BASE=500
 SHIPPING_FALLBACK_PER_KG=50
 ```
 
-`ANDREANI_BRANCHES_URL` es opcional. Si Andreani te entrega un endpoint de sucursales/puntos de retiro compatible con JSON, configuralo ahi; si queda vacio, el checkout muestra envio a domicilio y retiro en local.
+`ANDREANI_BRANCHES_URL` apunta al endpoint de sucursales/puntos de retiro. Si Andreani cambia el endpoint o los parametros para tu cuenta, actualizalo ahi.
 
 ## API Andreani
 
