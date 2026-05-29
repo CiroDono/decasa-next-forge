@@ -7,7 +7,7 @@ import { chatWithBot } from "@/lib/chat.functions";
 
 const WHATSAPP = "543548592127";
 const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-  "Hola Decasan, tengo una consulta a realizar.",
+  "Hola Decasan, tengo una consulta a realizar",
 )}`;
 const SITE_URL = "https://decasan.lovable.app";
 const SAFE_LINK_HOSTS = new Set(["decasan.lovable.app", "wa.me", "www.instagram.com", "web.facebook.com"]);
