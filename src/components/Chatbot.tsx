@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Link } from "@tanstack/react-router";
 import { chatWithBot } from "@/lib/chat.functions";
 
-const WHATSAPP = "5493548403666";
+const WHATSAPP = "543548592127";
 const WA_URL = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
   "Hola Decasan, tengo una consulta a realizar.",
 )}`;
