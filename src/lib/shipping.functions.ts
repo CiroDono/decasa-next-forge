@@ -186,26 +186,24 @@ async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBr
   const password = process.env.ANDREANI_PASSWORD || "";
   const baseUrl = process.env.ANDREANI_BRANCHES_URL || "https://apis.andreani.com/v2/sucursales";
 
-  if (!username || !password) {
-    console.warn("[shipping] Andreani credentials missing. Skipping pickup branches.");
-    return [];
-  }
-
   try {
     const cp = normalizePostalCode(codigoPostal);
-    const token = await getAndreaniToken(username, password);
+    const token = username && password ? await getAndreaniToken(username, password) : "";
     const url = new URL(baseUrl);
     url.searchParams.set("postal_code", cp);
     url.searchParams.set("postalCode", cp);
     url.searchParams.set("zipCode", cp);
     url.searchParams.set("codigoPostal", cp);
+    url.searchParams.set("codigoPostalDestino", cp);
+
+    const headers: HeadersInit = { Accept: "application/json" };
+    if (token) {
+      headers["x-authorization-token"] = token;
+    }
 
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        Accept: "application/json",
-        "x-authorization-token": token,
-      },
+      headers,
     });
 
     if (!response.ok) {
