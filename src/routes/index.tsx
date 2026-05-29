@@ -23,7 +23,7 @@ function Index() {
   return (
     <Layout>
       {/* HERO */}
-      <section className="relative bg-secondary text-secondary-foreground overflow-hidden">
+      <section id="inicio" className="relative bg-secondary text-secondary-foreground overflow-hidden scroll-mt-28">
         <img
           src={heroImg}
           alt="Herramientas profesionales en taller industrial"

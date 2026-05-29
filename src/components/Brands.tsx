@@ -11,7 +11,7 @@ const brands = [
 
 export function Brands() {
   return (
-    <section id="marcas" className="py-16 lg:py-20 bg-background border-y border-border">
+    <section id="marcas" className="py-16 lg:py-20 bg-background border-y border-border scroll-mt-28">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10 animate-fade-in-up animate-delay-300">
           <span className="inline-block text-xs font-bold uppercase tracking-widest text-yellow-500 mb-2">

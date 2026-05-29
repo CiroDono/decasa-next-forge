@@ -79,6 +79,7 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  html { scroll-behavior: smooth; }
   html, body { background-color: var(--color-background); color: var(--color-foreground); }
   body { font-family: var(--font-sans); font-feature-settings: "ss01", "cv11"; }
   h1, h2, h3, h4, .font-display {

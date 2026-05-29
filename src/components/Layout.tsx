@@ -34,6 +34,8 @@ export function Layout({ children }: { children: ReactNode }) {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
+            <a href="/#marcas" className="hover:text-primary">Marcas</a>
+            <Link to="/faq" className="hover:text-primary">Nosotros</Link>
             <Link to="/productos" className="hover:text-primary">Catálogo</Link>
             {isAdmin && (
               <Link to="/admin" className="text-primary hover:text-primary/80 flex items-center gap-1">
