@@ -188,7 +188,6 @@ async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBr
 
   try {
     const cp = normalizePostalCode(codigoPostal);
-    const token = username && password ? await getAndreaniToken(username, password) : "";
     const url = new URL(baseUrl);
     url.searchParams.set("postal_code", cp);
     url.searchParams.set("postalCode", cp);
@@ -196,15 +195,11 @@ async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBr
     url.searchParams.set("codigoPostal", cp);
     url.searchParams.set("codigoPostalDestino", cp);
 
-    const headers: HeadersInit = { Accept: "application/json" };
-    if (token) {
-      headers["x-authorization-token"] = token;
+    let response = await fetchAndreaniBranches(url);
+    if ((response.status === 401 || response.status === 403) && hasUsableCredentials(username, password)) {
+      const token = await getAndreaniToken(username, password);
+      response = await fetchAndreaniBranches(url, token);
     }
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-    });
 
     if (!response.ok) {
       console.error("[shipping] Andreani branches failed", {
@@ -223,6 +218,27 @@ async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBr
     console.error("[shipping] agencies lookup error", error);
     return [];
   }
+}
+
+function fetchAndreaniBranches(url: URL, token = ""): Promise<Response> {
+  const headers: HeadersInit = { Accept: "application/json" };
+  if (token) {
+    headers["x-authorization-token"] = token;
+  }
+  return fetch(url, {
+    method: "GET",
+    headers,
+  });
+}
+
+function hasUsableCredentials(username: string, password: string): boolean {
+  return Boolean(
+    username &&
+      password &&
+      username !== "tu_usuario" &&
+      password !== "tu_password" &&
+      password !== "tu_contrasena",
+  );
 }
 
 function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: ShippingOption[]): ShippingOption[] {
