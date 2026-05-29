@@ -1,135 +1,55 @@
-# Configuración del Calculador de Envío - Correo Argentino
+# Configuracion del Calculador de Envio - Andreani
 
-## Instalación
+El checkout usa `src/lib/shipping.functions.ts` para cotizar envios con Andreani y siempre agrega la opcion de retiro en el local.
 
-El calculador de envío ya está integrado en tu aplicación. Estos archivos fueron creados:
+## Variables de entorno
 
-- `src/lib/shipping.functions.ts` - Funciones server para calcular envíos con Correo Argentino
-- `src/components/ShippingCalculator.tsx` - Componente React para mostrar opciones de envío
-- `src/routes/checkout.tsx` - Actualizado para incluir el calculador
-
-## Variables de Entorno
-
-Para conectar con la API real de Correo Argentino, agrega las siguientes variables a tu archivo `.env.local`:
+Agrega estas variables a `.env.local`:
 
 ```env
-CORREO_ARGENTINO_USERNAME=tu_usuario
-CORREO_ARGENTINO_PASSWORD=tu_contrasena
-CORREO_ARGENTINO_API_KEY=tu_api_key_opcional
+ANDREANI_USERNAME=tu_usuario
+ANDREANI_PASSWORD=tu_contrasena
+ANDREANI_CLIENT=tu_codigo_cliente
+ANDREANI_CONTRACT=tu_contrato
+ANDREANI_PRODUCT_CATEGORY="Herramientas y equipamiento"
+ANDREANI_DESTINATION_CITY=
+ANDREANI_DEFAULT_DELIVERY_DAYS=5
+ANDREANI_LOGIN_URL=https://apis.andreani.com/login
+ANDREANI_QUOTE_URL=https://apis.andreanigloballpack.com/cotizador-globallpack/api/v1/Cotizador
+
+SHIPPING_ORIGIN_CP=5172
+SHIPPING_ORIGIN_CITY="La Falda"
+SHIPPING_DECLARED_VALUE=1000
+SHIPPING_DEFAULT_LENGTH_CM=20
+SHIPPING_DEFAULT_WIDTH_CM=20
+SHIPPING_DEFAULT_HEIGHT_CM=10
+SHIPPING_FALLBACK_BASE=500
+SHIPPING_FALLBACK_PER_KG=50
 ```
 
-### Cómo obtener las credenciales:
+`ANDREANI_BRANCHES_URL` es opcional. Si Andreani te entrega un endpoint de sucursales/puntos de retiro compatible con JSON, configuralo ahi; si queda vacio, el checkout muestra envio a domicilio y retiro en local.
 
-1. Accede a https://www.correoargentino.com.ar/
-2. Regístrate como usuario comercial
-3. Accede a tu panel de control
-4. Busca la sección "Herramientas" o "Integraciones"
-5. Solicita acceso a la API de cotización
-6. Copia tu usuario, contraseña y API key
+## API Andreani
 
-## API de Correo Argentino
+- Login: `GET https://apis.andreani.com/login` con Basic Auth.
+- Cotizador: `GET https://apis.andreanigloballpack.com/cotizador-globallpack/api/v1/Cotizador`.
+- El token de login se envia como header `x-authorization-token`.
+- El cotizador requiere contrato, cliente, origen, destino y datos del bulto.
 
-La implementación utiliza el endpoint:
-- **URL**: `https://api.correoargentino.com.ar/cv/v1.0/cotizador`
-- **Método**: POST
-- **Documentación**: https://www.correoargentino.com.ar/negocios
+La documentacion de Andreani indica que las credenciales se solicitan siendo cliente de Andreani y que los datos de destino deben coincidir con sus localidades normalizadas.
 
-### Servicios disponibles que calcula:
+## Fallback
 
-- **Carta Simple**: Documentos sin registro
-- **Carta Documento**: Documentos con comprobante
-- **Encomienda OCA**: Paquetes estándar
-- **Encomienda Express**: Paquetes prioritarios
+Si faltan credenciales o la API no responde, se muestran tarifas fallback configurables con:
 
-## Uso del Componente
-
-El calculador se utiliza en el checkout automáticamente:
-
-```tsx
-<ShippingCalculator
-  codigoPostal="5172"  // Código postal del destinatario
-  peso={2}             // Peso en kg
-  largo={30}           // Largo en cm (opcional)
-  ancho={20}           // Ancho en cm (opcional)
-  alto={15}            // Alto en cm (opcional)
-  onShippingSelect={(option) => console.log(option)}  // Callback cuando selecciona envío
-  selectedShipping="estandar"  // Envío preseleccionado
-/>
+```env
+SHIPPING_FALLBACK_BASE=500
+SHIPPING_FALLBACK_PER_KG=50
 ```
 
-## Estructura de respuesta
+## Prueba
 
-Cada opción de envío retorna:
-
-```typescript
-{
-  servicio: "Estándar",                    // Nombre del servicio
-  descripcion: "Envío estándar (5-7 días)",
-  dias_habiles: 6,                        // Días de entrega
-  precio: 500,                            // Precio en ARS
-  codigo_servicio: "estandar"            // Identificador único
-}
-```
-
-## Precios por defecto (cuando API no está disponible)
-
-Si la API de Correo Argentino no está configurada o no responde, se muestran precios por defecto:
-
-- **Estándar**: $500 + $50 por kg
-- **Rápido**: $750 + $75 por kg  
-- **Express**: $1250 + $125 por kg
-
-## Estructura de datos guardada en órdenes
-
-Cuando se crea una orden, los datos de envío se guardan como:
-
-```typescript
-{
-  servicio: "Estándar",
-  descripcion: "Envío estándar (5-7 días hábiles)",
-  costo: 500,
-  dias_habiles: 6,
-  codigo_servicio: "estandar"
-}
-```
-
-## Próximas mejoras sugeridas
-
-1. **Cálculo automático de peso**: Agregar peso a cada producto en la base de datos
-2. **Validación de código postal**: Verificar que el código postal sea válido antes de calcular
-3. **Seguimiento**: Integrar sistema de seguimiento con número de tracking
-4. **Múltiples transportistas**: Agregar opciones de DHL, FedEx, OCA
-5. **Pickup points**: Permitir retiro en sucursales en lugar de envío a domicilio
-
-## Solución de problemas
-
-### "No hay opciones de envío disponibles"
-- Verifica que el código postal sea válido
-- Comprueba que las credenciales de Correo Argentino sean correctas
-- Revisa los logs del servidor para más detalles
-
-### "Error al calcular envío"
-- Asegúrate de tener internet en el servidor
-- Verifica que la API de Correo Argentino esté disponible
-- Comprueba que no haya cambios en su documentación
-
-### El precio no coincide con Correo Argentino
-- La API puede requerir actualización de documentación
-- Los precios pueden cambiar según volumen de envíos
-- Contacta con Correo Argentino para verificar tarifas
-
-## Debugging
-
-Habilita logs más detallados en `src/lib/shipping.functions.ts`:
-
-```typescript
-console.log("Payload:", payload);
-console.log("Response:", data);
-```
-
-## Support
-
-Para más información sobre la API de Correo Argentino:
-- Web: https://www.correoargentino.com.ar/
-- Email: integraciones@correoargentino.com.ar
-- Teléfono: 0810-555-2674
+1. Ejecuta `bun run dev`.
+2. Entra a `/admin/shipping-demo`.
+3. Ingresa codigo postal y peso.
+4. Verifica que aparezcan retiro en local y opciones Andreani.

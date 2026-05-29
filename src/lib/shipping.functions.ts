@@ -26,6 +26,7 @@ export const LOCAL_PICKUP_CODE = "retiro-local";
 const shippingParamsSchema = z.object({
   peso: z.number().positive().max(500),
   destino_codigo_postal: z.string().trim().min(4, "Codigo postal invalido"), 
+  destino_ciudad: z.string().trim().min(1).optional(),
   origen_codigo_postal: z.string().trim().min(4).optional(),
   cantidad_bultos: z.number().int().positive().optional(),
   largo: z.number().nonnegative().optional(),
@@ -39,65 +40,70 @@ export const calculateShipping = createServerFn({ method: "POST" })
   .inputValidator((d) => shippingParamsSchema.parse(d))
   .handler(async ({ data: params }): Promise<ShippingOption[]> => {
     const [homeOptions, pickupBranches] = await Promise.all([
-      quoteCorreoArgentinoShipping(params),
-      getCorreoArgentinoPickupBranches(params.destino_codigo_postal),
+      quoteAndreaniShipping(params),
+      getAndreaniPickupBranches(params.destino_codigo_postal),
     ]);
     const branchOptions = buildPickupBranchOptions(pickupBranches, homeOptions);
     return [getLocalPickupOption(), ...branchOptions, ...homeOptions];
   });
 
-export async function quoteCorreoArgentinoShipping(params: ShippingQuoteParams): Promise<ShippingOption[]> {
+export async function quoteAndreaniShipping(params: ShippingQuoteParams): Promise<ShippingOption[]> {
   try {
-    const username = process.env.CORREO_ARGENTINO_USERNAME || "";
-    const password = process.env.CORREO_ARGENTINO_PASSWORD || "";
+    const username = process.env.ANDREANI_USERNAME || "";
+    const password = process.env.ANDREANI_PASSWORD || "";
+    const contrato = process.env.ANDREANI_CONTRACT || "";
+    const cliente = process.env.ANDREANI_CLIENT || "";
 
-    if (!username || !password) {
-      console.warn("[shipping] Correo Argentino credentials missing. Using fallback rates.");
+    if (!username || !password || !contrato || !cliente) {
+      console.warn("[shipping] Andreani credentials missing. Using fallback rates.");
       return getDefaultShippingOptions(params.peso);
     }
 
     const origenCp = params.origen_codigo_postal || process.env.SHIPPING_ORIGIN_CP || "5172";
-    const url = process.env.CORREO_ARGENTINO_QUOTE_URL || "https://api.correoargentino.com.ar/cv/v1.0/cotizador";
+    const token = await getAndreaniToken(username, password);
+    const baseUrl = process.env.ANDREANI_QUOTE_URL || "https://apis.andreanigloballpack.com/cotizador-globallpack/api/v1/Cotizador";
+    const url = new URL(baseUrl);
+    const destinationCp = normalizePostalCode(params.destino_codigo_postal);
+    const originCity = process.env.SHIPPING_ORIGIN_CITY || "La Falda";
+    const destinationCity = params.destino_ciudad || process.env.ANDREANI_DESTINATION_CITY || destinationCp;
+    const length = params.largo || Number(process.env.SHIPPING_DEFAULT_LENGTH_CM ?? 20);
+    const width = params.ancho || Number(process.env.SHIPPING_DEFAULT_WIDTH_CM ?? 20);
+    const height = params.alto || Number(process.env.SHIPPING_DEFAULT_HEIGHT_CM ?? 10);
+    const volumen = length * width * height;
 
-    console.info("[shipping] quoting Correo Argentino", {
+    url.searchParams.set("CpDestino", destinationCp);
+    url.searchParams.set("CiudadDestino", destinationCity);
+    url.searchParams.set("PaisDestino", "AR");
+    url.searchParams.set("CpOrigen", normalizePostalCode(origenCp));
+    url.searchParams.set("CiudadOrigen", originCity);
+    url.searchParams.set("PaisOrigen", "AR");
+    url.searchParams.set("Contrato", contrato);
+    url.searchParams.set("Cliente", cliente);
+    url.searchParams.set("bultos[0].valorDeclarado", process.env.SHIPPING_DECLARED_VALUE || "1000");
+    url.searchParams.set("bultos[0].volumen", String(volumen));
+    url.searchParams.set("bultos[0].kilos", String(params.peso));
+    url.searchParams.set("bultos[0].altoCm", String(height));
+    url.searchParams.set("bultos[0].largoCm", String(length));
+    url.searchParams.set("bultos[0].anchoCm", String(width));
+    url.searchParams.set("bultos[0].categoriaProducto", process.env.ANDREANI_PRODUCT_CATEGORY || "Herramientas y equipamiento");
+
+    console.info("[shipping] quoting Andreani", {
       origenCp,
       destinoCp: params.destino_codigo_postal,
       peso: params.peso,
       cantidadBultos: params.cantidad_bultos ?? 1,
     });
 
-    const payload = {
-      solicitante: {
-        usuario: username,
-        contrasena: password,
-      },
-      operacion: "VerificarCotizador",
-      parametros: {
-        envia: {
-          codigoPostal: origenCp,
-          idProvincia: 3,
-        },
-        recibe: {
-          codigoPostal: params.destino_codigo_postal.replace(/\D/g, '').substring(0, 4) || params.destino_codigo_postal,
-        },
-        envios: [
-          {
-            cantidad: params.cantidad_bultos || 1,
-            peso: params.peso,
-            volumen: (params.largo || 0) * (params.ancho || 0) * (params.alto || 0),
-          },
-        ],
-      },
-    };
-
     const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-authorization-token": token,
+      },
     });
 
     if (!response.ok) {
-      console.error("[shipping] Correo Argentino quote failed", {
+      console.error("[shipping] Andreani quote failed", {
         status: response.status,
         statusText: response.statusText,
       });
@@ -105,24 +111,23 @@ export async function quoteCorreoArgentinoShipping(params: ShippingQuoteParams):
     }
 
     const data = await response.json();
-    const servicios = data?.resultado?.serviciosDisponibles ?? data?.serviciosDisponibles ?? [];
+    const total = Number(data?.tarifaConIva?.total ?? data?.UltimaMilla ?? data?.total ?? data?.importe);
 
-    if (!Array.isArray(servicios) || servicios.length === 0) {
-      console.error("[shipping] Correo Argentino returned no services", { statusCode: data?.statusCode });
+    if (!Number.isFinite(total) || total <= 0) {
+      console.error("[shipping] Andreani returned no price", data);
       return getDefaultShippingOptions(params.peso);
     }
 
-    return servicios.map((s: any) => {
-      const precio = Number(s.monto ?? s.precio ?? s.importe ?? calculateDefaultPrice(params.peso));
-      return {
-        servicio: String(s.producto ?? s.servicio ?? "Correo Argentino"),
-        descripcion: String(s.descripcionProducto ?? s.descripcion ?? s.producto ?? "Envio Correo Argentino"),
-        dias_habiles: Number(s.plazoEntrega ?? s.dias_habiles ?? 5),
-        precio: roundMoney(precio),
-        codigo_servicio: String(s.idProducto ?? s.codigo_servicio ?? s.producto ?? "correo-argentino"),
+    return [
+      {
+        servicio: "Andreani",
+        descripcion: "Envio Andreani a domicilio",
+        dias_habiles: Number(process.env.ANDREANI_DEFAULT_DELIVERY_DAYS ?? 5),
+        precio: roundMoney(total),
+        codigo_servicio: "andreani-domicilio",
         tipo: "domicilio",
-      };
-    });
+      },
+    ];
   } catch (error) {
     console.error("[shipping] quote error", error);
     return getDefaultShippingOptions(params.peso);
@@ -138,10 +143,10 @@ export async function selectShippingOption(
     return getLocalPickupOption();
   }
 
-  if (codigoServicio.startsWith("correo-sucursal:")) {
+  if (codigoServicio.startsWith("andreani-sucursal:")) {
     const [homeOptions, pickupBranches] = await Promise.all([
-      quoteCorreoArgentinoShipping(params),
-      getCorreoArgentinoPickupBranches(params.destino_codigo_postal),
+      quoteAndreaniShipping(params),
+      getAndreaniPickupBranches(params.destino_codigo_postal),
     ]);
     const selected = buildPickupBranchOptions(pickupBranches, homeOptions).find(
       (option) => option.codigo_servicio === codigoServicio,
@@ -152,7 +157,7 @@ export async function selectShippingOption(
     return selected;
   }
 
-  const options = await quoteCorreoArgentinoShipping(params);
+  const options = await quoteAndreaniShipping(params);
   const selected = options.find((option) => option.codigo_servicio === codigoServicio);
   if (!selected) {
     console.warn("[shipping] selected service is not available", {
@@ -176,36 +181,28 @@ export function getLocalPickupOption(): ShippingOption {
   };
 }
 
-async function getCorreoArgentinoPickupBranches(codigoPostal: string): Promise<PickupBranch[]> {
-  const apiKey = process.env.CORREO_ARGENTINO_API_KEY || process.env.CORREO_ARGENTINO_AGENCIES_API_KEY || "";
-  const agreement = process.env.CORREO_ARGENTINO_AGREEMENT || "";
-  const baseUrl = process.env.CORREO_ARGENTINO_AGENCIES_URL || "https://api.correoargentino.com.ar/paqar/v1/agencies";
+async function getAndreaniPickupBranches(codigoPostal: string): Promise<PickupBranch[]> {
+  const baseUrl = process.env.ANDREANI_BRANCHES_URL || "";
 
-  if (!apiKey || !agreement) {
-    console.warn("[shipping] Correo Argentino agencies credentials missing. Skipping pickup branches.");
+  if (!baseUrl) {
+    console.warn("[shipping] Andreani branches URL missing. Skipping pickup branches.");
     return [];
   }
 
   try {
-    const cp = codigoPostal.replace(/\D/g, "").substring(0, 4);
+    const cp = normalizePostalCode(codigoPostal);
     const url = new URL(baseUrl);
     url.searchParams.set("postal_code", cp);
     url.searchParams.set("postalCode", cp);
     url.searchParams.set("zipCode", cp);
-    url.searchParams.set("pickup_availability", "true");
-    url.searchParams.set("package_reception", "true");
 
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        Authorization: `Apikey ${apiKey}`,
-        agreement,
-        Accept: "application/json",
-      },
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) {
-      console.error("[shipping] Correo Argentino agencies failed", {
+      console.error("[shipping] Andreani branches failed", {
         status: response.status,
         statusText: response.statusText,
       });
@@ -229,11 +226,11 @@ function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: Shippin
   const days = reference ? reference.dias_habiles : 5;
 
   return branches.slice(0, 5).map((branch) => ({
-    servicio: "Retiro en sucursal Correo Argentino",
+    servicio: "Retiro en sucursal Andreani",
     descripcion: `Retiro en sucursal - ${branch.nombre}`,
     dias_habiles: days,
     precio: price,
-    codigo_servicio: `correo-sucursal:${branch.id}`,
+    codigo_servicio: `andreani-sucursal:${branch.id}`,
     tipo: "sucursal" as const,
     sucursal: branch,
   }));
@@ -241,7 +238,7 @@ function buildPickupBranchOptions(branches: PickupBranch[], homeOptions: Shippin
 
 function normalizePickupBranch(raw: any): PickupBranch | null {
   const id = String(raw.id ?? raw.code ?? raw.codigo ?? raw.agency_id ?? raw.sucursalId ?? "").trim();
-  const nombre = String(raw.name ?? raw.nombre ?? raw.description ?? raw.descripcion ?? "Sucursal Correo Argentino").trim();
+  const nombre = String(raw.name ?? raw.nombre ?? raw.description ?? raw.descripcion ?? "Sucursal Andreani").trim();
   const street = raw.address ?? raw.direccion ?? raw.street ?? raw.calle;
   const number = raw.number ?? raw.numero;
   const direccion = [street, number].filter(Boolean).join(" ").trim();
@@ -262,30 +259,49 @@ function normalizePickupBranch(raw: any): PickupBranch | null {
 function getDefaultShippingOptions(peso: number): ShippingOption[] {
   return [
     {
-      servicio: "Estandar",
-      descripcion: "Envio estandar (5-7 dias habiles)",
+      servicio: "Andreani estandar",
+      descripcion: "Envio Andreani estandar (5-7 dias habiles)",
       dias_habiles: 6,
       precio: calculateDefaultPrice(peso),
-      codigo_servicio: "estandar",
+      codigo_servicio: "andreani-estandar",
       tipo: "domicilio",
     },
     {
-      servicio: "Rapido",
-      descripcion: "Envio rapido (2-3 dias habiles)",
+      servicio: "Andreani rapido",
+      descripcion: "Envio Andreani rapido (2-3 dias habiles)",
       dias_habiles: 3,
       precio: roundMoney(calculateDefaultPrice(peso) * 1.5),
-      codigo_servicio: "rapido",
-      tipo: "domicilio",
-    },
-    {
-      servicio: "Express",
-      descripcion: "Envio express (24 horas)",
-      dias_habiles: 1,
-      precio: roundMoney(calculateDefaultPrice(peso) * 2.5),
-      codigo_servicio: "express",
+      codigo_servicio: "andreani-rapido",
       tipo: "domicilio",
     },
   ];
+}
+
+async function getAndreaniToken(username: string, password: string): Promise<string> {
+  const loginUrl = process.env.ANDREANI_LOGIN_URL || "https://apis.andreani.com/login";
+  const credentials = Buffer.from(`${username}:${password}`).toString("base64");
+  const response = await fetch(loginUrl, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Basic ${credentials}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Andreani login failed: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const token = data?.token ?? data?.access_token ?? data?.bearerToken;
+  if (!token) {
+    throw new Error("Andreani login did not return a token");
+  }
+  return String(token);
+}
+
+function normalizePostalCode(value: string): string {
+  return value.replace(/\D/g, "").substring(0, 4) || value;
 }
 
 function calculateDefaultPrice(peso: number): number {

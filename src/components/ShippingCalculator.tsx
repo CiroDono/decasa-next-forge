@@ -8,6 +8,7 @@ import { formatARS } from "@/lib/format";
 
 interface ShippingCalculatorProps {
   codigoPostal: string;
+  ciudad?: string;
   peso?: number;
   largo?: number;
   ancho?: number;
@@ -18,6 +19,7 @@ interface ShippingCalculatorProps {
 
 export function ShippingCalculator({
   codigoPostal,
+  ciudad = "",
   peso = 1,
   largo = 0,
   ancho = 0,
@@ -30,12 +32,13 @@ export function ShippingCalculator({
   const canQuoteShipping = codigoPostal.trim().length >= 4;
 
   const { data: opciones, isLoading, error } = useQuery({
-    queryKey: ["shipping", codigoPostal, peso, largo, ancho, alto],
+    queryKey: ["shipping", codigoPostal, ciudad, peso, largo, ancho, alto],
     queryFn: () =>
       shippingFn({
         data: {
           peso,
           destino_codigo_postal: codigoPostal,
+          destino_ciudad: ciudad || undefined,
           cantidad_bultos: 1,
           largo,
           ancho,
@@ -54,7 +57,7 @@ export function ShippingCalculator({
   useEffect(() => {
     setLocalSelected("");
     onShippingSelect?.(null);
-  }, [codigoPostal, peso]);
+  }, [codigoPostal, ciudad, peso]);
 
   useEffect(() => {
     if (!localSelected && shippingOptions[0]) {

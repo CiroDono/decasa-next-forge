@@ -112,6 +112,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       {
         peso: packageWeight,
         destino_codigo_postal: isLocalPickup ? process.env.SHIPPING_ORIGIN_CP || "5172" : destinationPostalCode,
+        destino_ciudad: isLocalPickup ? process.env.SHIPPING_ORIGIN_CITY || "La Falda" : data.direccion.ciudad?.trim() || undefined,
         cantidad_bultos: 1,
       },
       data.envio.codigo_servicio,

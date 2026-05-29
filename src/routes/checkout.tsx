@@ -139,6 +139,7 @@ if (!isMounted || loading || !user) return <Layout><div className="container-x p
               <div className="mb-4">
                 <ShippingCalculator
                   codigoPostal={form.codigo_postal}
+                  ciudad={form.ciudad}
                   onShippingSelect={setSelectedShipping}
                   selectedShipping={selectedShipping?.codigo_servicio}
                 />

@@ -5,6 +5,7 @@ import { calculateShipping } from "@/lib/shipping.functions";
 export default function ShippingDemoPage() {
   const shippingFn = useServerFn(calculateShipping);
   const [codigoPostal, setCodigoPostal] = useState("1636");
+  const [ciudad, setCiudad] = useState("Olivos");
   const [peso, setPeso] = useState("2");
   const [resultado, setResultado] = useState<any>(null);
   const [cargando, setCargando] = useState(false);
@@ -15,8 +16,11 @@ export default function ShippingDemoPage() {
     setError("");
     try {
       const opciones = await shippingFn({
-        peso: parseFloat(peso),
-        destino_codigo_postal: codigoPostal,
+        data: {
+          peso: parseFloat(peso),
+          destino_codigo_postal: codigoPostal,
+          destino_ciudad: ciudad,
+        },
       });
       setResultado(opciones);
     } catch (err) {
@@ -39,6 +43,17 @@ export default function ShippingDemoPage() {
               value={codigoPostal}
               onChange={(e) => setCodigoPostal(e.target.value)}
               placeholder="Ej: 1636"
+              className="w-full border border-border rounded px-3 py-2 outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Ciudad Destino</label>
+            <input
+              type="text"
+              value={ciudad}
+              onChange={(e) => setCiudad(e.target.value)}
+              placeholder="Ej: Olivos"
               className="w-full border border-border rounded px-3 py-2 outline-none focus:border-primary"
             />
           </div>
