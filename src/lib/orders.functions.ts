@@ -2,10 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { LOCAL_PICKUP_CODE, selectShippingOption } from "@/lib/shipping.functions";
+import { LOCAL_PICKUP_CODE, TRANSPORTISTA_LABEL } from "@/lib/shipping.functions";
 import { assertValidPublicBaseUrl, getMercadoPagoAccessToken, getPublicBaseUrl } from "@/lib/mercadopago";
-
-const DEFAULT_ITEM_WEIGHT_KG = 1;
 
 const itemSchema = z.object({
   id: z.number().int().positive(),
@@ -26,7 +24,7 @@ const createOrderSchema = z.object({
     codigo_postal: z.string().trim().max(8).optional().nullable(),
   }),
   envio: z.object({
-    codigo_servicio: z.string().trim().min(1).max(80),
+    shipping_option_id: z.string().uuid(),
   }),
   notas: z.string().max(500).optional().nullable(),
 });
@@ -54,13 +52,14 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       userId,
       itemCount: data.items.length,
       destinoCp: data.direccion.codigo_postal,
-      shippingCode: data.envio.codigo_servicio,
+      shippingOptionId: data.envio.shipping_option_id,
     });
 
-    const isLocalPickup = data.envio.codigo_servicio === LOCAL_PICKUP_CODE;
-    const destinationPostalCode = data.direccion.codigo_postal?.trim() ?? "";
-    if (!isLocalPickup) {
-      validateShippingAddress(data.direccion);
+    const shipping = await getActiveShippingOption(data.envio.shipping_option_id);
+    const isLocalPickup = shipping.codigo_servicio === LOCAL_PICKUP_CODE;
+    if (!isLocalPickup) validateShippingAddress(data.direccion);
+    if (shipping.provincia && normalizeProvince(shipping.provincia) !== normalizeProvince(data.direccion.provincia ?? "")) {
+      throw new Error("La opcion de envio no corresponde a la provincia indicada");
     }
 
     const ids = [...new Set(data.items.map((item) => item.id))];
@@ -103,20 +102,6 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
     });
 
     const productsSubtotal = roundMoney(validatedItems.reduce((sum, item) => sum + item.subtotal, 0));
-    const packageWeight = Math.max(
-      DEFAULT_ITEM_WEIGHT_KG,
-      data.items.reduce((sum, item) => sum + item.qty * DEFAULT_ITEM_WEIGHT_KG, 0),
-    );
-
-    const shipping = await selectShippingOption(
-      {
-        peso: packageWeight,
-        destino_codigo_postal: isLocalPickup ? process.env.SHIPPING_ORIGIN_CP || "5172" : destinationPostalCode,
-        destino_ciudad: isLocalPickup ? process.env.SHIPPING_ORIGIN_CITY || "La Falda" : data.direccion.ciudad?.trim() || undefined,
-        cantidad_bultos: 1,
-      },
-      data.envio.codigo_servicio,
-    );
     const shippingTotal = roundMoney(shipping.precio);
     const total = roundMoney(productsSubtotal + shippingTotal);
 
@@ -125,7 +110,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       productsSubtotal,
       shippingTotal,
       total,
-      shippingCode: shipping.codigo_servicio,
+      shippingOptionId: shipping.id,
     });
 
     const MP_TOKEN = getMercadoPagoAccessToken();
@@ -140,6 +125,9 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         subtotal_productos: productsSubtotal,
         envio_total: shippingTotal,
         envio_metodo: shipping,
+        shipping_option_id: shipping.id,
+        costo_envio: shippingTotal,
+        transportista: shipping.transportista,
         total,
         email: data.email,
         nombre: data.nombre,
@@ -242,6 +230,39 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
     };
   });
 
+async function getActiveShippingOption(id: string) {
+  const { data, error } = await supabaseAdmin
+    .from("shipping_options")
+    .select("id, transportista, provincia, costo, label, dias_estimados_min, dias_estimados_max, activo")
+    .eq("id", id)
+    .single();
+
+  if (error || !data || !data.activo) {
+    console.warn("[orders] invalid shipping option", { id, error: error?.message });
+    throw new Error("La opcion de envio seleccionada ya no esta disponible");
+  }
+
+  const transportista = data.transportista as keyof typeof TRANSPORTISTA_LABEL;
+  const costo = roundMoney(Number(data.costo));
+  const isLocalPickup = transportista === "retiro_local";
+
+  return {
+    id: data.id,
+    transportista,
+    provincia: data.provincia,
+    costo,
+    label: data.label,
+    dias_estimados_min: data.dias_estimados_min,
+    dias_estimados_max: data.dias_estimados_max,
+    codigo_servicio: isLocalPickup ? LOCAL_PICKUP_CODE : data.id,
+    servicio: TRANSPORTISTA_LABEL[transportista],
+    descripcion: data.label,
+    dias_habiles: data.dias_estimados_max ?? data.dias_estimados_min ?? 0,
+    precio: costo,
+    tipo: isLocalPickup ? "local" : "domicilio",
+  };
+}
+
 function validateShippingAddress(direccion: z.infer<typeof createOrderSchema>["direccion"]) {
   if (!direccion.calle?.trim()) throw new Error("Ingresa la calle para el envio");
   if (!direccion.ciudad?.trim()) throw new Error("Ingresa la ciudad para el envio");
@@ -262,4 +283,12 @@ function getEffectivePrice(product: ProductForOrder): number {
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function normalizeProvince(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }

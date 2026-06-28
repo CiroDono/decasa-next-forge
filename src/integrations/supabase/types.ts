@@ -150,6 +150,7 @@ export type Database = {
       pedidos: {
         Row: {
           confirmation_email_sent_at: string | null
+          costo_envio: number
           created_at: string
           direccion: Json | null
           email: string | null
@@ -161,14 +162,17 @@ export type Database = {
           mp_preference_id: string | null
           nombre: string | null
           notas: string | null
+          shipping_option_id: string | null
           subtotal_productos: number
           telefono: string | null
           total: number
+          transportista: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           confirmation_email_sent_at?: string | null
+          costo_envio?: number
           created_at?: string
           direccion?: Json | null
           email?: string | null
@@ -180,14 +184,17 @@ export type Database = {
           mp_preference_id?: string | null
           nombre?: string | null
           notas?: string | null
+          shipping_option_id?: string | null
           subtotal_productos?: number
           telefono?: string | null
           total?: number
+          transportista?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           confirmation_email_sent_at?: string | null
+          costo_envio?: number
           created_at?: string
           direccion?: Json | null
           email?: string | null
@@ -199,11 +206,60 @@ export type Database = {
           mp_preference_id?: string | null
           nombre?: string | null
           notas?: string | null
+          shipping_option_id?: string | null
           subtotal_productos?: number
           telefono?: string | null
           total?: number
+          transportista?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_shipping_option_id_fkey"
+            columns: ["shipping_option_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipping_options: {
+        Row: {
+          activo: boolean
+          costo: number
+          created_at: string
+          dias_estimados_max: number | null
+          dias_estimados_min: number | null
+          id: string
+          label: string
+          provincia: string | null
+          transportista: Database["public"]["Enums"]["transportista"]
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          costo?: number
+          created_at?: string
+          dias_estimados_max?: number | null
+          dias_estimados_min?: number | null
+          id?: string
+          label: string
+          provincia?: string | null
+          transportista: Database["public"]["Enums"]["transportista"]
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          costo?: number
+          created_at?: string
+          dias_estimados_max?: number | null
+          dias_estimados_min?: number | null
+          id?: string
+          label?: string
+          provincia?: string | null
+          transportista?: Database["public"]["Enums"]["transportista"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -415,6 +471,11 @@ export type Database = {
         | "enviado"
         | "entregado"
         | "cancelado"
+      transportista:
+        | "correo_argentino"
+        | "andreani"
+        | "cadete"
+        | "retiro_local"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -549,6 +610,12 @@ export const Constants = {
         "enviado",
         "entregado",
         "cancelado",
+      ],
+      transportista: [
+        "correo_argentino",
+        "andreani",
+        "cadete",
+        "retiro_local",
       ],
     },
   },

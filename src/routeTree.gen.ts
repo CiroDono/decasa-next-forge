@@ -26,6 +26,7 @@ import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
 import { Route as AuthenticatedAdminProductosRouteImport } from './routes/_authenticated.admin.productos'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
+import { Route as AuthenticatedAdminEnviosRouteImport } from './routes/_authenticated.admin.envios'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -114,6 +115,12 @@ const AuthenticatedAdminPedidosRoute =
     path: '/pedidos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEnviosRoute =
+  AuthenticatedAdminEnviosRouteImport.update({
+    id: '/envios',
+    path: '/envios',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
+  '/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
   '/api/public/mercadopago': typeof ApiPublicMercadopagoRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
+  '/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
   '/api/public/mercadopago': typeof ApiPublicMercadopagoRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -166,6 +175,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
+  '/_authenticated/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
   '/api/public/mercadopago': typeof ApiPublicMercadopagoRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/productos'
     | '/admin/usuarios'
+    | '/admin/envios'
     | '/api/public/bootstrap-admin'
     | '/api/public/mercadopago'
     | '/admin/'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/productos'
     | '/admin/usuarios'
+    | '/admin/envios'
     | '/api/public/bootstrap-admin'
     | '/api/public/mercadopago'
     | '/admin'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/productos'
     | '/_authenticated/admin/usuarios'
+    | '/_authenticated/admin/envios'
     | '/api/public/bootstrap-admin'
     | '/api/public/mercadopago'
     | '/_authenticated/admin/'
@@ -362,10 +375,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/envios': {
+      id: '/_authenticated/admin/envios'
+      path: '/envios'
+      fullPath: '/admin/envios'
+      preLoaderRoute: typeof AuthenticatedAdminEnviosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminEnviosRoute: typeof AuthenticatedAdminEnviosRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminProductosRoute: typeof AuthenticatedAdminProductosRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
@@ -373,6 +394,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminEnviosRoute: AuthenticatedAdminEnviosRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminProductosRoute: AuthenticatedAdminProductosRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,

@@ -1,18 +1,18 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { CreditCard, MessageCircle, Truck } from "lucide-react";
 import { toast } from "sonner";
-import { CreditCard, Truck, MessageCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ShippingCalculator } from "@/components/ShippingCalculator";
+import { useSession } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
+import { formatARS } from "@/lib/format";
+import { createOrderAndPreference } from "@/lib/orders.functions";
+import { getProfile } from "@/lib/profile.functions";
 import { LOCAL_PICKUP_CODE } from "@/lib/shipping.functions";
 import type { ShippingOption } from "@/lib/shipping.functions";
-import { useCart } from "@/lib/cart";
-import { useSession } from "@/lib/auth";
-import { formatARS } from "@/lib/format";
-import { getProfile } from "@/lib/profile.functions";
-import { createOrderAndPreference } from "@/lib/orders.functions";
 
 export const Route = createFileRoute("/checkout")({ component: CheckoutPage });
 
@@ -28,20 +28,29 @@ function CheckoutPage() {
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => profileFn(), enabled: !!user });
 
   const [form, setForm] = useState({
-    email: "", nombre: "", telefono: "",
-    calle: "", numero: "", piso: "", ciudad: "", provincia: "", codigo_postal: "",
+    email: "",
+    nombre: "",
+    telefono: "",
+    calle: "",
+    numero: "",
+    piso: "",
+    ciudad: "",
+    provincia: "",
+    codigo_postal: "",
     notas: "",
   });
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
   const isLocalPickup = selectedShipping?.codigo_servicio === LOCAL_PICKUP_CODE;
+  const shippingTotal = selectedShipping?.precio ?? 0;
+  const finalTotal = total + shippingTotal;
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login", search: { redirect: "/checkout", mode: "login" } });
   }, [loading, user, navigate]);
 
-  const [isMounted, setIsMounted] = useState(false);
-  
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -65,12 +74,19 @@ function CheckoutPage() {
     }
   }, [profile.data, user]);
 
-if (!isMounted || loading || !user) return <Layout><div className="container-x py-20 text-center text-muted-foreground">Cargando...</div></Layout>;
+  if (!isMounted || loading || !user) {
+    return (
+      <Layout>
+        <div className="container-x py-20 text-center text-muted-foreground">Cargando...</div>
+      </Layout>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <Layout>
         <div className="container-x py-20 max-w-md text-center">
-          <h1 className="font-display text-3xl">Tu carrito está vacío</h1>
+          <h1 className="font-display text-3xl">Tu carrito esta vacio</h1>
           <Link to="/productos" className="inline-block mt-6 bg-primary text-primary-foreground px-5 py-2.5 font-display tracking-wide hover:bg-primary/90">
             Ver productos
           </Link>
@@ -94,11 +110,15 @@ if (!isMounted || loading || !user) return <Layout><div className="container-x p
           nombre: form.nombre,
           telefono: form.telefono,
           direccion: {
-            calle: form.calle, numero: form.numero, piso: form.piso,
-            ciudad: form.ciudad, provincia: form.provincia, codigo_postal: form.codigo_postal,
+            calle: form.calle,
+            numero: form.numero,
+            piso: form.piso,
+            ciudad: form.ciudad,
+            provincia: form.provincia,
+            codigo_postal: form.codigo_postal,
           },
           envio: {
-            codigo_servicio: selectedShipping.codigo_servicio,
+            shipping_option_id: selectedShipping.id,
           },
           notas: form.notas || null,
         },
@@ -131,31 +151,38 @@ if (!isMounted || loading || !user) return <Layout><div className="container-x p
               <Grid>
                 <Field label="Nombre completo" value={form.nombre} onChange={(v) => setForm({ ...form, nombre: v })} required />
                 <Field label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required />
-                <Field label="Teléfono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} required />
+                <Field label="Telefono" value={form.telefono} onChange={(v) => setForm({ ...form, telefono: v })} required />
               </Grid>
             </Section>
 
             <Section title="Entrega">
-              <div className="mb-4">
+              <Grid>
+                <Field label="Calle" value={form.calle} onChange={(v) => setForm({ ...form, calle: v })} required={!isLocalPickup} />
+                <Field label="Numero" value={form.numero} onChange={(v) => setForm({ ...form, numero: v })} />
+                <Field label="Piso/Depto" value={form.piso} onChange={(v) => setForm({ ...form, piso: v })} />
+                <Field label="Codigo postal" value={form.codigo_postal} onChange={(v) => setForm({ ...form, codigo_postal: v })} required={!isLocalPickup} />
+                <Field label="Ciudad" value={form.ciudad} onChange={(v) => setForm({ ...form, ciudad: v })} required={!isLocalPickup} />
+                <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} required={!isLocalPickup} />
+              </Grid>
+              <div className="mt-4">
                 <ShippingCalculator
+                  provincia={form.provincia}
                   codigoPostal={form.codigo_postal}
                   ciudad={form.ciudad}
                   onShippingSelect={setSelectedShipping}
                   selectedShipping={selectedShipping?.codigo_servicio}
                 />
               </div>
-              <Grid>
-                <Field label="Calle" value={form.calle} onChange={(v) => setForm({ ...form, calle: v })} required={!isLocalPickup} />
-                <Field label="Número" value={form.numero} onChange={(v) => setForm({ ...form, numero: v })} />
-                <Field label="Piso/Depto" value={form.piso} onChange={(v) => setForm({ ...form, piso: v })} />
-                <Field label="Código postal" value={form.codigo_postal} onChange={(v) => setForm({ ...form, codigo_postal: v })} required={!isLocalPickup} />
-                <Field label="Ciudad" value={form.ciudad} onChange={(v) => setForm({ ...form, ciudad: v })} required={!isLocalPickup} />
-                <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} required={!isLocalPickup} />
-              </Grid>
             </Section>
 
             <Section title="Notas (opcional)">
-              <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={3} className="w-full border border-border bg-background px-3 py-2 outline-none focus:border-primary" placeholder="Aclaraciones para la entrega..." />
+              <textarea
+                value={form.notas}
+                onChange={(e) => setForm({ ...form, notas: e.target.value })}
+                rows={3}
+                className="w-full border border-border bg-background px-3 py-2 outline-none focus:border-primary"
+                placeholder="Aclaraciones para la entrega..."
+              />
             </Section>
           </div>
 
@@ -164,29 +191,27 @@ if (!isMounted || loading || !user) return <Layout><div className="container-x p
             <ul className="space-y-2 text-sm border-b border-border pb-3">
               {items.map((i) => (
                 <li key={i.id} className="flex justify-between gap-3">
-                  <span className="line-clamp-1">{i.qty}× {i.nombre}</span>
+                  <span className="line-clamp-1">{i.qty}x {i.nombre}</span>
                   <span className="shrink-0">{formatARS(i.precio * i.qty)}</span>
                 </li>
               ))}
             </ul>
             <div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatARS(total)}</span></div>
             <div className="flex justify-between text-sm">
-              <span className="flex items-center gap-1"><Truck className="size-3" /> Envío</span>
+              <span className="flex items-center gap-1"><Truck className="size-3" /> Envio</span>
               <span>{selectedShipping ? selectedShipping.precio === 0 ? "Sin costo" : formatARS(selectedShipping.precio) : "A coordinar"}</span>
             </div>
             <div className="flex justify-between font-display text-xl pt-3 border-t border-border">
               <span>Total final</span>
-              <span className="text-right text-base leading-tight">
-                Validado al pagar
-              </span>
+              <span>{formatARS(finalTotal)}</span>
             </div>
 
-<button 
-  disabled={busy} 
-  className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
->
-  <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
-</button>
+            <button
+              disabled={busy || !selectedShipping}
+              className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
+            </button>
             <p className="text-xs text-muted-foreground text-center">
               El servidor valida precios, envio y total antes de redirigirte a Mercado Pago.
             </p>
@@ -208,14 +233,34 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   );
 }
+
 function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid sm:grid-cols-2 gap-3">{children}</div>;
 }
-function Field({ label, value, onChange, required, type }: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string }) {
+
+function Field({
+  label,
+  value,
+  onChange,
+  required,
+  type,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  type?: string;
+}) {
   return (
     <label className="block">
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} required={required} className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
+      <input
+        type={type ?? "text"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+      />
     </label>
   );
 }
