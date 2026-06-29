@@ -75,6 +75,9 @@ function AdminPedidos() {
               {(p.envio_total != null || p.costo_envio != null) && (
                 <p><strong>Costo de envio:</strong> {shippingCost === 0 ? "Sin costo" : formatARS(shippingCost)}</p>
               )}
+              {p.notas && (
+                <p className="whitespace-pre-line"><strong>Notas:</strong> {p.notas}</p>
+              )}
               {p.mp_payment_id && <p className="text-xs text-muted-foreground">MP: {p.mp_payment_id}</p>}
               <ul className="mt-2 space-y-1">
                 {p.pedido_items?.map((it: any) => (

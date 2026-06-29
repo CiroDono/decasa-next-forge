@@ -115,15 +115,16 @@ function toShippingOption(row: {
 }): ShippingOption {
   const min = row.dias_estimados_min;
   const max = row.dias_estimados_max;
+  const isLocalPickup = row.transportista === "retiro_local";
   return {
     ...row,
     costo: Number(row.costo),
-    codigo_servicio: row.id,
+    codigo_servicio: isLocalPickup ? LOCAL_PICKUP_CODE : row.id,
     servicio: TRANSPORTISTA_LABEL[row.transportista],
     descripcion: row.label,
     dias_habiles: max ?? min ?? 0,
     precio: Number(row.costo),
-    tipo: row.transportista === "retiro_local" ? "local" : "domicilio",
+    tipo: isLocalPickup ? "local" : "domicilio",
   };
 }
 

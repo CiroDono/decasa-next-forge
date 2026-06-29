@@ -26,6 +26,7 @@ const createOrderSchema = z.object({
   envio: z.object({
     shipping_option_id: z.string().uuid(),
   }),
+  metodo_pago: z.enum(["transferencia", "tarjeta", "efectivo"]).default("tarjeta"),
   notas: z.string().max(500).optional().nullable(),
 });
 
@@ -58,6 +59,9 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
     const shipping = await getActiveShippingOption(data.envio.shipping_option_id);
     const isLocalPickup = shipping.codigo_servicio === LOCAL_PICKUP_CODE;
     if (!isLocalPickup) validateShippingAddress(data.direccion);
+    if (data.metodo_pago === "efectivo" && !isLocalPickup) {
+      throw new Error("El pago en efectivo solo esta disponible para retiro en local");
+    }
     if (shipping.provincia && normalizeProvince(shipping.provincia) !== normalizeProvince(data.direccion.provincia ?? "")) {
       throw new Error("La opcion de envio no corresponde a la provincia indicada");
     }
@@ -133,7 +137,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         nombre: data.nombre,
         telefono: data.telefono,
         direccion: isLocalPickup ? null : data.direccion,
-        notas: data.notas ?? null,
+        notas: formatOrderNotes(data.metodo_pago, data.notas),
       } as any)
       .select()
       .single();
@@ -157,6 +161,17 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       throw new Error(itemError.message);
     }
 
+    if (data.metodo_pago !== "tarjeta") {
+      return {
+        pedidoId: pedido.id,
+        total,
+        initPoint: null,
+        sandboxInitPoint: null,
+        mpConfigured: false,
+        paymentMethod: data.metodo_pago,
+      };
+    }
+
     if (!MP_TOKEN) {
       console.warn("[orders] Mercado Pago token missing", { requestId, pedidoId: pedido.id });
       return {
@@ -165,6 +180,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         initPoint: null,
         sandboxInitPoint: null,
         mpConfigured: false,
+        paymentMethod: data.metodo_pago,
       };
     }
 
@@ -212,6 +228,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         initPoint: null,
         sandboxInitPoint: null,
         mpConfigured: true,
+        paymentMethod: data.metodo_pago,
         error: "Mercado Pago no respondio correctamente",
       };
     }
@@ -227,6 +244,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       initPoint: pref.init_point as string,
       sandboxInitPoint: pref.sandbox_init_point as string,
       mpConfigured: true,
+      paymentMethod: data.metodo_pago,
     };
   });
 
@@ -283,6 +301,16 @@ function getEffectivePrice(product: ProductForOrder): number {
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function formatOrderNotes(metodoPago: z.infer<typeof createOrderSchema>["metodo_pago"], notas: string | null | undefined): string {
+  const label = {
+    transferencia: "Transferencia / Mercado Pago",
+    tarjeta: "Mercado Pago (Tarjeta/Transferencia)",
+    efectivo: "Efectivo al retirar (a convenir)",
+  }[metodoPago];
+  const extra = notas?.trim();
+  return extra ? `Metodo de pago: ${label}\n${extra}` : `Metodo de pago: ${label}`;
 }
 
 function normalizeProvince(value: string): string {

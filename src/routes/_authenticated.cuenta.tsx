@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, MapPin, Package } from "lucide-react";
+import { Plus, Trash2, MapPin, Package, MessageCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import {
   getProfile,
@@ -128,6 +128,25 @@ function CuentaPage() {
                     </li>
                   ))}
                 </ul>
+
+                {p.estado === "pendiente" && p.notas?.includes("Efectivo al retirar") && (
+                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between gap-3 flex-wrap bg-primary/5 p-3">
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground block mb-0.5">Retiro y Pago en Efectivo:</span>
+                      Retirá tu pedido en el local y pagá al recibirlo.
+                    </div>
+                    <a
+                      href={`https://wa.me/5493548403666?text=${encodeURIComponent(
+                        `¡Hola! Acabo de hacer el pedido #${p.id.slice(0, 8)} con retiro en local y pago en efectivo. Quería coordinar para retirar.`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-2 flex items-center gap-1.5 transition-colors font-display tracking-wide uppercase"
+                    >
+                      <MessageCircle className="size-3.5" /> Coordinar por WhatsApp
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>

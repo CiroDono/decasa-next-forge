@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard, MessageCircle, Truck } from "lucide-react";
+import { BadgeCheck, Banknote, CreditCard, MessageCircle, Store, Truck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
 import { ShippingCalculator } from "@/components/ShippingCalculator";
@@ -15,6 +16,8 @@ import { LOCAL_PICKUP_CODE, SHIPPING_PROVINCES } from "@/lib/shipping.functions"
 import type { ShippingOption } from "@/lib/shipping.functions";
 
 export const Route = createFileRoute("/checkout")({ component: CheckoutPage });
+
+type PaymentMethod = "transferencia" | "tarjeta" | "efectivo";
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -40,6 +43,7 @@ function CheckoutPage() {
     notas: "",
   });
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("tarjeta");
   const [busy, setBusy] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -78,6 +82,12 @@ function CheckoutPage() {
       }));
     }
   }, [profile.data, user]);
+
+  useEffect(() => {
+    if (!isLocalPickup && paymentMethod === "efectivo") {
+      setPaymentMethod("tarjeta");
+    }
+  }, [isLocalPickup, paymentMethod]);
 
   if (!isMounted || loading || !user) {
     return (
@@ -125,6 +135,7 @@ function CheckoutPage() {
           envio: {
             shipping_option_id: selectedShipping.id,
           },
+          metodo_pago: paymentMethod,
           notas: form.notas || null,
         },
       });
@@ -135,7 +146,7 @@ function CheckoutPage() {
       } else if (res.mpConfigured) {
         toast.error(res.error ?? "No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo.");
       } else {
-        toast.success("Pedido creado. Te contactamos para coordinar el pago.");
+        toast.success(getSuccessMessage(paymentMethod));
         navigate({ to: "/cuenta" });
       }
     } catch (err) {
@@ -180,6 +191,15 @@ function CheckoutPage() {
               </div>
             </Section>
 
+            <Section title="Metodo de pago">
+              <PaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                allowCash={isLocalPickup}
+                disabled={!selectedShipping}
+              />
+            </Section>
+
             <Section title="Notas (opcional)">
               <textarea
                 value={form.notas}
@@ -215,10 +235,12 @@ function CheckoutPage() {
               disabled={busy || !selectedShipping}
               className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <CreditCard className="size-4" /> {busy ? "Procesando..." : "Pagar con Mercado Pago"}
+              <CreditCard className="size-4" /> {busy ? "Procesando..." : getSubmitLabel(paymentMethod)}
             </button>
             <p className="text-xs text-muted-foreground text-center">
-              El servidor valida precios, envio y total antes de redirigirte a Mercado Pago.
+              {paymentMethod === "tarjeta"
+                ? "El servidor valida precios, envio y total antes de redirigirte a Mercado Pago."
+                : "El servidor valida precios, envio y total antes de crear el pedido."}
             </p>
             <a href="https://wa.me/5493548403666" target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-primary text-center flex items-center justify-center gap-1">
               <MessageCircle className="size-3" /> Pagar por transferencia / consultar
@@ -268,6 +290,103 @@ function Field({
       />
     </label>
   );
+}
+
+function PaymentMethodSelector({
+  value,
+  onChange,
+  allowCash,
+  disabled,
+}: {
+  value: PaymentMethod;
+  onChange: (value: PaymentMethod) => void;
+  allowCash: boolean;
+  disabled: boolean;
+}) {
+  const options: Array<{
+    value: PaymentMethod;
+    title: string;
+    subtitle: string;
+    icon: LucideIcon;
+    disabled?: boolean;
+  }> = [
+    {
+      value: "tarjeta",
+      title: "Tarjeta / Transferencia",
+      subtitle: "Pagas de forma segura a través de Mercado Pago.",
+      icon: CreditCard,
+    },
+    {
+      value: "efectivo",
+      title: "Efectivo en local",
+      subtitle: "Pagá al retirar en nuestro local.",
+      icon: Banknote,
+      disabled: !allowCash,
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="grid sm:grid-cols-2 gap-2">
+        {options.map((option) => {
+          const Icon = option.icon;
+          const isDisabled = disabled || option.disabled;
+          const selected = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => onChange(option.value)}
+              className={`border px-4 py-3 text-left min-h-24 transition-colors disabled:opacity-45 disabled:cursor-not-allowed ${
+                selected ? "border-primary bg-primary/10" : "border-border bg-background hover:border-primary/60"
+              }`}
+            >
+              <span className="flex items-center gap-2 font-medium text-sm">
+                <Icon className="size-4 text-primary" />
+                {option.title}
+              </span>
+              <span className="mt-2 block text-xs text-muted-foreground leading-relaxed">{option.subtitle}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {value === "tarjeta" && (
+        <div className="border border-border bg-secondary/30 p-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <BadgeCheck className="size-4 text-primary" />
+            Pago online por Mercado Pago
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Al confirmar, te redirigiremos a Mercado Pago para completar tu pago con tarjeta o transferencia. El pedido se procesará automáticamente.
+          </p>
+        </div>
+      )}
+
+      {value === "efectivo" && (
+        <div className="border border-border bg-secondary/30 p-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <Store className="size-4 text-primary" />
+            Coordinar pago en el local
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Al confirmar tu pedido, reservaremos tus productos. Podés abonar en efectivo, débito o crédito directamente cuando retires en el local.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getSubmitLabel(paymentMethod: PaymentMethod): string {
+  if (paymentMethod === "efectivo") return "Confirmar retiro";
+  return "Pagar con Mercado Pago";
+}
+
+function getSuccessMessage(paymentMethod: PaymentMethod): string {
+  if (paymentMethod === "efectivo") return "¡Pedido creado! Coordinemos por WhatsApp.";
+  return "¡Pedido creado con éxito!";
 }
 
 function ProvinceField({
