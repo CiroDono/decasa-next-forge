@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeCategoryName, uniqueSortedCategories } from "@/lib/categories";
 import type { Transportista } from "@/lib/shipping.functions";
 
@@ -55,7 +56,7 @@ export const adminListShippingOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AdminShippingRow[]> => {
     await ensureAdmin(context.supabase, context.userId);
-    const { data, error } = await context.supabase
+    const { data, error } = await supabaseAdmin
       .from("shipping_options")
       .select("id, transportista, provincia, costo, label, activo, dias_estimados_min, dias_estimados_max")
       .order("transportista")
@@ -80,7 +81,7 @@ export const adminUpdateShippingOption = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
     const { id, ...patch } = data;
-    const { error } = await context.supabase.from("shipping_options").update(patch).eq("id", id);
+    const { error } = await supabaseAdmin.from("shipping_options").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
