@@ -26,8 +26,17 @@ const createOrderSchema = z.object({
   envio: z.object({
     shipping_option_id: z.string().uuid(),
   }),
+  pago: z.object({
+    metodo: z.enum(["transferencia_mp", "tarjeta", "efectivo"]),
+  }),
   notas: z.string().max(500).optional().nullable(),
 });
+
+const PAYMENT_LABELS = {
+  transferencia_mp: "Transferencia por Mercado Pago",
+  tarjeta: "Tarjeta",
+  efectivo: "Efectivo en el local",
+} as const;
 
 type ProductForOrder = {
   id: number;
@@ -53,11 +62,15 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       itemCount: data.items.length,
       destinoCp: data.direccion.codigo_postal,
       shippingOptionId: data.envio.shipping_option_id,
+      paymentMethod: data.pago.metodo,
     });
 
     const shipping = await getActiveShippingOption(data.envio.shipping_option_id);
     const isLocalPickup = shipping.codigo_servicio === LOCAL_PICKUP_CODE;
     if (!isLocalPickup) validateShippingAddress(data.direccion);
+    if (data.pago.metodo === "efectivo" && !isLocalPickup) {
+      throw new Error("El pago en efectivo solo esta disponible con retiro en local");
+    }
     if (shipping.provincia && normalizeProvince(shipping.provincia) !== normalizeProvince(data.direccion.provincia ?? "")) {
       throw new Error("La opcion de envio no corresponde a la provincia indicada");
     }
@@ -133,7 +146,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         nombre: data.nombre,
         telefono: data.telefono,
         direccion: isLocalPickup ? null : data.direccion,
-        notas: data.notas ?? null,
+        notas: buildOrderNotes(data.pago.metodo, data.notas),
       } as any)
       .select()
       .single();
@@ -155,6 +168,17 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
     if (itemError) {
       console.error("[orders] order items insert failed", { requestId, pedidoId: pedido.id, error: itemError.message });
       throw new Error(itemError.message);
+    }
+
+    if (data.pago.metodo === "efectivo") {
+      console.info("[orders] order created for cash payment", { requestId, pedidoId: pedido.id });
+      return {
+        pedidoId: pedido.id,
+        total,
+        initPoint: null,
+        sandboxInitPoint: null,
+        mpConfigured: false,
+      };
     }
 
     if (!MP_TOKEN) {
@@ -189,6 +213,10 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       ],
       payer: { email: data.email, name: data.nombre },
       external_reference: pedido.id,
+      metadata: {
+        payment_method: data.pago.metodo,
+        payment_label: PAYMENT_LABELS[data.pago.metodo],
+      },
       back_urls: {
         success: `${origin}/cuenta?pedido=${pedido.id}`,
         failure: `${origin}/checkout?pedido=${pedido.id}`,
@@ -283,6 +311,12 @@ function getEffectivePrice(product: ProductForOrder): number {
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function buildOrderNotes(paymentMethod: keyof typeof PAYMENT_LABELS, notes: string | null | undefined) {
+  const paymentNote = `Metodo de pago: ${PAYMENT_LABELS[paymentMethod]}`;
+  const trimmedNotes = notes?.trim();
+  return trimmedNotes ? `${paymentNote}\n${trimmedNotes}` : paymentNote;
 }
 
 function normalizeProvince(value: string): string {
