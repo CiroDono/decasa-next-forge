@@ -206,6 +206,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       paymentMethodsConfig.excluded_payment_types = [
         { id: "credit_card" },
         { id: "debit_card" },
+        { id: "prepaid_card" },
         { id: "ticket" }
       ];
     }
