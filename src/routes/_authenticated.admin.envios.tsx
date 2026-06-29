@@ -1,41 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Check, CircleOff, Pencil, Power, Truck, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { adminListShippingOptions, adminUpdateShippingOption } from "@/lib/admin.functions";
+import type { AdminShippingRow } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 import { TRANSPORTISTA_LABEL } from "@/lib/shipping.functions";
 import type { Transportista } from "@/lib/shipping.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/envios")({ component: AdminEnvios });
 
-type ShippingRow = {
-  id: string;
-  transportista: Transportista;
-  provincia: string | null;
-  costo: number;
-  label: string;
-  activo: boolean;
-  dias_estimados_min: number | null;
-  dias_estimados_max: number | null;
-};
-
 const TRANSPORTISTA_ORDER: Transportista[] = ["retiro_local", "cadete", "correo_argentino", "andreani"];
 
 function AdminEnvios() {
   const qc = useQueryClient();
-  const { data: rows = [], isLoading } = useQuery<ShippingRow[]>({
+  const listShipping = useServerFn(adminListShippingOptions);
+  const updateShipping = useServerFn(adminUpdateShippingOption);
+  const { data: rows = [], isLoading, error } = useQuery<AdminShippingRow[]>({
     queryKey: ["admin-shipping"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("shipping_options")
-        .select("id, transportista, provincia, costo, label, activo, dias_estimados_min, dias_estimados_max")
-        .order("transportista")
-        .order("provincia");
-      if (error) throw new Error(error.message);
-      return (data ?? []).map((row) => ({ ...row, costo: Number(row.costo) })) as ShippingRow[];
-    },
+    queryFn: () => listShipping(),
   });
 
   const grouped = TRANSPORTISTA_ORDER.map((transportista) => ({
@@ -43,10 +28,11 @@ function AdminEnvios() {
     options: rows.filter((row) => row.transportista === transportista),
   })).filter((group) => group.options.length > 0);
 
-  async function toggleActivo(row: ShippingRow) {
-    const { error } = await supabase.from("shipping_options").update({ activo: !row.activo }).eq("id", row.id);
-    if (error) {
-      toast.error(error.message);
+  async function toggleActivo(row: AdminShippingRow) {
+    try {
+      await updateShipping({ data: { id: row.id, activo: !row.activo } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo actualizar la opcion");
       return;
     }
     toast.success(row.activo ? "Opcion desactivada" : "Opcion activada");
@@ -55,6 +41,10 @@ function AdminEnvios() {
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Cargando configuracion de envios...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-destructive">No se pudieron cargar las tarifas de envio.</p>;
   }
 
   return (
@@ -83,6 +73,7 @@ function AdminEnvios() {
               <ShippingRow
                 key={row.id}
                 row={row}
+                onSave={updateShipping}
                 onToggle={toggleActivo}
                 onSaved={() => qc.invalidateQueries({ queryKey: ["admin-shipping"] })}
               />
@@ -96,11 +87,13 @@ function AdminEnvios() {
 
 function ShippingRow({
   row,
+  onSave,
   onToggle,
   onSaved,
 }: {
-  row: ShippingRow;
-  onToggle: (row: ShippingRow) => void;
+  row: AdminShippingRow;
+  onSave: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+  onToggle: (row: AdminShippingRow) => void;
   onSaved: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -127,15 +120,21 @@ function ShippingRow({
     }
 
     setSaving(true);
-    const { error } = await supabase
-      .from("shipping_options")
-      .update({ costo: costoNum, dias_estimados_min: min, dias_estimados_max: max })
-      .eq("id", row.id);
-    setSaving(false);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await onSave({
+        data: {
+          id: row.id,
+          costo: costoNum,
+          dias_estimados_min: min,
+          dias_estimados_max: max,
+        },
+      });
+    } catch (err) {
+      setSaving(false);
+      toast.error(err instanceof Error ? err.message : "No se pudo actualizar la tarifa");
       return;
     }
+    setSaving(false);
     toast.success("Tarifa actualizada");
     setEditing(false);
     onSaved();

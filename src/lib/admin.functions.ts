@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeCategoryName, uniqueSortedCategories } from "@/lib/categories";
+import type { Transportista } from "@/lib/shipping.functions";
 
 async function ensureAdmin(supabase: any, userId: string) {
   const { data } = await supabase
@@ -19,7 +20,7 @@ export const adminListPedidos = createServerFn({ method: "GET" })
     await ensureAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
       .from("pedidos")
-      .select("id, estado, total, email, nombre, telefono, direccion, envio_total, envio_metodo, created_at, mp_payment_id, pedido_items(id, nombre, cantidad, subtotal)")
+      .select("id, estado, total, email, nombre, telefono, direccion, envio_total, costo_envio, envio_metodo, transportista, created_at, mp_payment_id, pedido_items(id, nombre, cantidad, subtotal)")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
@@ -35,6 +36,51 @@ export const adminUpdatePedidoEstado = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
     const { error } = await context.supabase.from("pedidos").update({ estado: data.estado }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export type AdminShippingRow = {
+  id: string;
+  transportista: Transportista;
+  provincia: string | null;
+  costo: number;
+  label: string;
+  activo: boolean;
+  dias_estimados_min: number | null;
+  dias_estimados_max: number | null;
+};
+
+export const adminListShippingOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminShippingRow[]> => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("shipping_options")
+      .select("id, transportista, provincia, costo, label, activo, dias_estimados_min, dias_estimados_max")
+      .order("transportista")
+      .order("provincia", { nullsFirst: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row: any) => ({ ...row, costo: Number(row.costo) }));
+  });
+
+export const adminUpdateShippingOption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    costo: z.number().nonnegative().optional(),
+    activo: z.boolean().optional(),
+    dias_estimados_min: z.number().int().min(0).nullable().optional(),
+    dias_estimados_max: z.number().int().min(0).nullable().optional(),
+  }).refine((value) => (
+    value.dias_estimados_min == null
+    || value.dias_estimados_max == null
+    || value.dias_estimados_min <= value.dias_estimados_max
+  ), "El minimo de dias no puede ser mayor al maximo.").parse(d))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { id, ...patch } = data;
+    const { error } = await context.supabase.from("shipping_options").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

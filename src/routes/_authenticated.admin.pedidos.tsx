@@ -23,6 +23,8 @@ function AdminPedidos() {
         const shipping = p.envio_metodo as any;
         const isLocalPickup = shipping?.codigo_servicio === LOCAL_PICKUP_CODE || !p.direccion;
         const deliveryLabel = isLocalPickup ? "Retiro en local" : "Envio";
+        const shippingCost = Number(p.envio_total ?? p.costo_envio ?? 0);
+        const shippingDescription = shipping?.descripcion ?? shipping?.label ?? p.transportista;
 
         return (
           <details key={p.id} className="border border-border bg-surface-elevated">
@@ -61,7 +63,7 @@ function AdminPedidos() {
               <p><strong>Tel:</strong> {p.telefono}</p>
               <p>
                 <strong>Entrega:</strong> {deliveryLabel}
-                {shipping?.descripcion ? ` - ${shipping.descripcion}` : ""}
+                {shippingDescription ? ` - ${shippingDescription}` : ""}
               </p>
               {!isLocalPickup && p.direccion && (
                 <p>
@@ -70,8 +72,8 @@ function AdminPedidos() {
                   {(p.direccion as any).codigo_postal})
                 </p>
               )}
-              {p.envio_total != null && (
-                <p><strong>Costo de envio:</strong> {formatARS(Number(p.envio_total))}</p>
+              {(p.envio_total != null || p.costo_envio != null) && (
+                <p><strong>Costo de envio:</strong> {shippingCost === 0 ? "Sin costo" : formatARS(shippingCost)}</p>
               )}
               {p.mp_payment_id && <p className="text-xs text-muted-foreground">MP: {p.mp_payment_id}</p>}
               <ul className="mt-2 space-y-1">

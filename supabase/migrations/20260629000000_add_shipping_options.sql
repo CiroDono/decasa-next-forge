@@ -35,6 +35,9 @@ create unique index if not exists shipping_options_global_unique
 
 alter table public.shipping_options enable row level security;
 
+grant select on public.shipping_options to anon, authenticated;
+grant insert, update, delete on public.shipping_options to authenticated;
+
 drop policy if exists "public read active shipping" on public.shipping_options;
 create policy "public read active shipping"
   on public.shipping_options for select

@@ -29,6 +29,33 @@ export const TRANSPORTISTA_LABEL: Record<Transportista, string> = {
   retiro_local: "Retiro en local",
 };
 
+export const SHIPPING_PROVINCES = [
+  "Buenos Aires",
+  "Ciudad Autonoma de Buenos Aires",
+  "Catamarca",
+  "Chaco",
+  "Chubut",
+  "Cordoba",
+  "Corrientes",
+  "Entre Rios",
+  "Formosa",
+  "Jujuy",
+  "La Pampa",
+  "La Rioja",
+  "Mendoza",
+  "Misiones",
+  "Neuquen",
+  "Rio Negro",
+  "Salta",
+  "San Juan",
+  "San Luis",
+  "Santa Cruz",
+  "Santa Fe",
+  "Santiago del Estero",
+  "Tierra del Fuego",
+  "Tucuman",
+] as const;
+
 const shippingOptionsSchema = z.object({
   provincia: z.string().trim().max(80).optional().nullable(),
 });

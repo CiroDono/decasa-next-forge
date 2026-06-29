@@ -11,7 +11,7 @@ import { useCart } from "@/lib/cart";
 import { formatARS } from "@/lib/format";
 import { createOrderAndPreference } from "@/lib/orders.functions";
 import { getProfile } from "@/lib/profile.functions";
-import { LOCAL_PICKUP_CODE } from "@/lib/shipping.functions";
+import { LOCAL_PICKUP_CODE, SHIPPING_PROVINCES } from "@/lib/shipping.functions";
 import type { ShippingOption } from "@/lib/shipping.functions";
 
 export const Route = createFileRoute("/checkout")({ component: CheckoutPage });
@@ -47,6 +47,11 @@ function CheckoutPage() {
   const shippingTotal = selectedShipping?.precio ?? 0;
   const finalTotal = total + shippingTotal;
 
+  function setProvincia(provincia: string) {
+    setForm((current) => ({ ...current, provincia }));
+    setSelectedShipping(null);
+  }
+
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login", search: { redirect: "/checkout", mode: "login" } });
   }, [loading, user, navigate]);
@@ -68,7 +73,7 @@ function CheckoutPage() {
         numero: f.numero || d?.numero || "",
         piso: f.piso || d?.piso || "",
         ciudad: f.ciudad || d?.ciudad || "",
-        provincia: f.provincia || d?.provincia || "",
+        provincia: f.provincia || findShippingProvince(d?.provincia) || "",
         codigo_postal: f.codigo_postal || d?.codigo_postal || "",
       }));
     }
@@ -162,7 +167,7 @@ function CheckoutPage() {
                 <Field label="Piso/Depto" value={form.piso} onChange={(v) => setForm({ ...form, piso: v })} />
                 <Field label="Codigo postal" value={form.codigo_postal} onChange={(v) => setForm({ ...form, codigo_postal: v })} required={!isLocalPickup} />
                 <Field label="Ciudad" value={form.ciudad} onChange={(v) => setForm({ ...form, ciudad: v })} required={!isLocalPickup} />
-                <Field label="Provincia" value={form.provincia} onChange={(v) => setForm({ ...form, provincia: v })} required={!isLocalPickup} />
+                <ProvinceField label="Provincia" value={form.provincia} onChange={setProvincia} required={!isLocalPickup} />
               </Grid>
               <div className="mt-4">
                 <ShippingCalculator
@@ -263,4 +268,48 @@ function Field({
       />
     </label>
   );
+}
+
+function ProvinceField({
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full mt-1 border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+      >
+        <option value="">Selecciona una provincia</option>
+        {SHIPPING_PROVINCES.map((provincia) => (
+          <option key={provincia} value={provincia}>
+            {provincia}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function findShippingProvince(value: string | null | undefined): string {
+  const normalized = normalizeProvince(value ?? "");
+  return SHIPPING_PROVINCES.find((provincia) => normalizeProvince(provincia) === normalized) ?? "";
+}
+
+function normalizeProvince(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }
