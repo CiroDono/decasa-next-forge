@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, Banknote, CreditCard, MessageCircle, Store, Truck } from "lucide-react";
+import { BadgeCheck, Banknote, CreditCard, Landmark, MessageCircle, Store, Truck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
@@ -43,7 +43,7 @@ function CheckoutPage() {
     notas: "",
   });
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("tarjeta");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("transferencia_mp");
   const [busy, setBusy] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -59,7 +59,7 @@ function CheckoutPage() {
   function setShipping(option: ShippingOption | null) {
     setSelectedShipping(option);
     if (option?.codigo_servicio !== LOCAL_PICKUP_CODE && paymentMethod === "efectivo") {
-      setPaymentMethod("tarjeta");
+      setPaymentMethod("transferencia_mp");
     }
   }
 
@@ -92,7 +92,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!isLocalPickup && paymentMethod === "efectivo") {
-      setPaymentMethod("tarjeta");
+      setPaymentMethod("transferencia_mp");
     }
   }, [isLocalPickup, paymentMethod]);
 
@@ -321,29 +321,39 @@ function PaymentMethodSelector({
     title: string;
     subtitle: string;
     icon: LucideIcon;
-    disabled?: boolean;
+    show: boolean;
   }> = [
     {
+      value: "transferencia_mp",
+      title: "Transferencia",
+      subtitle: "Pago directo por QR o App de Mercado Pago.",
+      icon: Landmark,
+      show: true,
+    },
+    {
       value: "tarjeta",
-      title: "Tarjeta / Transferencia",
-      subtitle: "Pagas de forma segura a través de Mercado Pago.",
+      title: "Tarjeta",
+      subtitle: "Tarjeta de crédito o débito por Mercado Pago.",
       icon: CreditCard,
+      show: true,
     },
     {
       value: "efectivo",
       title: "Efectivo en local",
       subtitle: "Pagá al retirar en nuestro local.",
       icon: Banknote,
-      disabled: !allowCash,
+      show: allowCash,
     },
   ];
 
+  const visibleOptions = options.filter((o) => o.show);
+
   return (
     <div className="space-y-3">
-      <div className="grid sm:grid-cols-2 gap-2">
-        {options.map((option) => {
+      <div className={`grid gap-2 ${visibleOptions.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {visibleOptions.map((option) => {
           const Icon = option.icon;
-          const isDisabled = disabled || option.disabled;
+          const isDisabled = disabled;
           const selected = value === option.value;
           return (
             <button
@@ -365,14 +375,26 @@ function PaymentMethodSelector({
         })}
       </div>
 
+      {value === "transferencia_mp" && (
+        <div className="border border-border bg-secondary/30 p-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <BadgeCheck className="size-4 text-primary" />
+            Transferencia por Mercado Pago
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Al confirmar, te redirigiremos a Mercado Pago para generar tu QR de pago o realizar la transferencia directa desde tu app.
+          </p>
+        </div>
+      )}
+
       {value === "tarjeta" && (
         <div className="border border-border bg-secondary/30 p-3 text-sm">
           <div className="flex items-center gap-2 font-medium">
             <BadgeCheck className="size-4 text-primary" />
-            Pago online por Mercado Pago
+            Pago con Tarjeta por Mercado Pago
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Al confirmar, te redirigiremos a Mercado Pago para completar tu pago con tarjeta o transferencia. El pedido se procesará automáticamente.
+            Al confirmar, te redirigiremos a Mercado Pago para completar tu pago de forma segura con tarjeta de crédito o débito.
           </p>
         </div>
       )}
@@ -394,7 +416,8 @@ function PaymentMethodSelector({
 
 function getSubmitLabel(paymentMethod: PaymentMethod): string {
   if (paymentMethod === "efectivo") return "Confirmar retiro";
-  return "Pagar con Mercado Pago";
+  if (paymentMethod === "transferencia_mp") return "Pagar Transferencia";
+  return "Pagar con Tarjeta";
 }
 
 function getSuccessMessage(paymentMethod: PaymentMethod): string {

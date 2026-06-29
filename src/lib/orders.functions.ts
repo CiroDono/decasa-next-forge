@@ -34,7 +34,7 @@ const createOrderSchema = z.object({
 
 const PAYMENT_LABELS = {
   transferencia_mp: "Transferencia por Mercado Pago",
-  tarjeta: "Mercado Pago (Tarjeta/Transferencia)",
+  tarjeta: "Tarjeta por Mercado Pago",
   efectivo: "Efectivo al retirar (a convenir)",
 } as const;
 
@@ -195,6 +195,21 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       };
     }
 
+    // Configure exclusions to force bank transfer (debin/QR) or cards
+    const paymentMethodsConfig: any = {};
+    if (data.pago.metodo === "tarjeta") {
+      paymentMethodsConfig.excluded_payment_types = [
+        { id: "bank_transfer" },
+        { id: "ticket" }
+      ];
+    } else if (data.pago.metodo === "transferencia_mp") {
+      paymentMethodsConfig.excluded_payment_types = [
+        { id: "credit_card" },
+        { id: "debit_card" },
+        { id: "ticket" }
+      ];
+    }
+
     const prefBody = {
       items: [
         ...validatedItems.map((item) => ({
@@ -220,6 +235,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         payment_method: data.pago.metodo,
         payment_label: PAYMENT_LABELS[data.pago.metodo],
       },
+      payment_methods: paymentMethodsConfig,
       back_urls: {
         success: `${origin}/cuenta?pedido=${pedido.id}`,
         failure: `${origin}/checkout?pedido=${pedido.id}`,
