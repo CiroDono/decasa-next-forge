@@ -26,20 +26,16 @@ const createOrderSchema = z.object({
   envio: z.object({
     shipping_option_id: z.string().uuid(),
   }),
-<<<<<<< HEAD
-  metodo_pago: z.enum(["transferencia", "tarjeta", "efectivo"]).default("tarjeta"),
-=======
   pago: z.object({
     metodo: z.enum(["transferencia_mp", "tarjeta", "efectivo"]),
   }),
->>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
   notas: z.string().max(500).optional().nullable(),
 });
 
 const PAYMENT_LABELS = {
   transferencia_mp: "Transferencia por Mercado Pago",
-  tarjeta: "Tarjeta",
-  efectivo: "Efectivo en el local",
+  tarjeta: "Mercado Pago (Tarjeta/Transferencia)",
+  efectivo: "Efectivo al retirar (a convenir)",
 } as const;
 
 type ProductForOrder = {
@@ -72,13 +68,9 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
     const shipping = await getActiveShippingOption(data.envio.shipping_option_id);
     const isLocalPickup = shipping.codigo_servicio === LOCAL_PICKUP_CODE;
     if (!isLocalPickup) validateShippingAddress(data.direccion);
-<<<<<<< HEAD
-    if (data.metodo_pago === "efectivo" && !isLocalPickup) {
-      throw new Error("El pago en efectivo solo esta disponible para retiro en local");
-=======
+    
     if (data.pago.metodo === "efectivo" && !isLocalPickup) {
       throw new Error("El pago en efectivo solo esta disponible con retiro en local");
->>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
     }
     if (shipping.provincia && normalizeProvince(shipping.provincia) !== normalizeProvince(data.direccion.provincia ?? "")) {
       throw new Error("La opcion de envio no corresponde a la provincia indicada");
@@ -155,11 +147,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         nombre: data.nombre,
         telefono: data.telefono,
         direccion: isLocalPickup ? null : data.direccion,
-<<<<<<< HEAD
-        notas: formatOrderNotes(data.metodo_pago, data.notas),
-=======
         notas: buildOrderNotes(data.pago.metodo, data.notas),
->>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
       } as any)
       .select()
       .single();
@@ -183,22 +171,15 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       throw new Error(itemError.message);
     }
 
-<<<<<<< HEAD
-    if (data.metodo_pago !== "tarjeta") {
-=======
     if (data.pago.metodo === "efectivo") {
       console.info("[orders] order created for cash payment", { requestId, pedidoId: pedido.id });
->>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
       return {
         pedidoId: pedido.id,
         total,
         initPoint: null,
         sandboxInitPoint: null,
         mpConfigured: false,
-<<<<<<< HEAD
-        paymentMethod: data.metodo_pago,
-=======
->>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
+        paymentMethod: data.pago.metodo,
       };
     }
 
@@ -210,7 +191,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         initPoint: null,
         sandboxInitPoint: null,
         mpConfigured: false,
-        paymentMethod: data.metodo_pago,
+        paymentMethod: data.pago.metodo,
       };
     }
 
@@ -262,7 +243,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
         initPoint: null,
         sandboxInitPoint: null,
         mpConfigured: true,
-        paymentMethod: data.metodo_pago,
+        paymentMethod: data.pago.metodo,
         error: "Mercado Pago no respondio correctamente",
       };
     }
@@ -278,7 +259,7 @@ export const createOrderAndPreference = createServerFn({ method: "POST" })
       initPoint: pref.init_point as string,
       sandboxInitPoint: pref.sandbox_init_point as string,
       mpConfigured: true,
-      paymentMethod: data.metodo_pago,
+      paymentMethod: data.pago.metodo,
     };
   });
 
@@ -337,21 +318,10 @@ function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-<<<<<<< HEAD
-function formatOrderNotes(metodoPago: z.infer<typeof createOrderSchema>["metodo_pago"], notas: string | null | undefined): string {
-  const label = {
-    transferencia: "Transferencia / Mercado Pago",
-    tarjeta: "Mercado Pago (Tarjeta/Transferencia)",
-    efectivo: "Efectivo al retirar (a convenir)",
-  }[metodoPago];
-  const extra = notas?.trim();
-  return extra ? `Metodo de pago: ${label}\n${extra}` : `Metodo de pago: ${label}`;
-=======
 function buildOrderNotes(paymentMethod: keyof typeof PAYMENT_LABELS, notes: string | null | undefined) {
   const paymentNote = `Metodo de pago: ${PAYMENT_LABELS[paymentMethod]}`;
   const trimmedNotes = notes?.trim();
   return trimmedNotes ? `${paymentNote}\n${trimmedNotes}` : paymentNote;
->>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
 }
 
 function normalizeProvince(value: string): string {
