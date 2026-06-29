@@ -44,7 +44,12 @@ function AdminEnvios() {
   }
 
   if (error) {
-    return <p className="text-sm text-destructive">No se pudieron cargar las tarifas de envio.</p>;
+    return (
+      <div className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+        <p className="font-medium">No se pudieron cargar las tarifas de envio.</p>
+        <p className="mt-1 text-xs">{error instanceof Error ? error.message : "Error desconocido"}</p>
+      </div>
+    );
   }
 
   return (

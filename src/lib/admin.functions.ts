@@ -56,12 +56,22 @@ export const adminListShippingOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AdminShippingRow[]> => {
     await ensureAdmin(context.supabase, context.userId);
-    const { data, error } = await supabaseAdmin
+    const selectShippingOptions = (client: any) => client
       .from("shipping_options")
       .select("id, transportista, provincia, costo, label, activo, dias_estimados_min, dias_estimados_max")
       .order("transportista")
       .order("provincia", { nullsFirst: true });
-    if (error) throw new Error(error.message);
+
+    const primary = await selectShippingOptions(context.supabase);
+    const result = primary.error ? await selectShippingOptions(supabaseAdmin) : primary;
+    if (result.error) {
+      console.error("[admin] shipping options load failed", {
+        userClientError: primary.error?.message,
+        adminClientError: result.error.message,
+      });
+      throw new Error(result.error.message);
+    }
+    const data = result.data;
     return (data ?? []).map((row: any) => ({ ...row, costo: Number(row.costo) }));
   });
 
