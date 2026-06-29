@@ -11,22 +11,22 @@ interface Reel {
 const FEATURED_REELS: Reel[] = [
   {
     id: "1",
-    url: "https://www.instagram.com/reel/DYR8dscmilD/",
-    title: "Oferta imperdible",
+    url: "https://www.instagram.com/reel/DZpsQ2VAO-p/",
+    title: "Sorteo Mundialista",
     thumbnail:
       "/reel1.png",
   },
   {
     id: "2",
-    url: "https://www.instagram.com/reel/DXt2by-AKhi/",
-    title: "Tips profesionales",
+    url: "https://www.instagram.com/reel/DZgC5jnCffs/",
+    title: "Oferton",
     thumbnail:
       "/reel2.png",
   },
   {
     id: "3",
-    url: "https://www.instagram.com/reel/DYpIzMrA_CE/",
-    title: "Sierra Viral",
+    url: "https://www.instagram.com/reel/DZKrarSAEwb/",
+    title: "Taladro Total",
     thumbnail:
       "/reel3.png",
   },

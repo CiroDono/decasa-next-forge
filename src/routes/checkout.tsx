@@ -2,8 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+<<<<<<< HEAD
 import { BadgeCheck, Banknote, CreditCard, MessageCircle, Store, Truck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+=======
+import { Banknote, CreditCard, Landmark, MessageCircle, ShieldCheck, Truck } from "lucide-react";
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
 import { toast } from "sonner";
 import { Layout } from "@/components/Layout";
 import { ShippingCalculator } from "@/components/ShippingCalculator";
@@ -17,7 +21,11 @@ import type { ShippingOption } from "@/lib/shipping.functions";
 
 export const Route = createFileRoute("/checkout")({ component: CheckoutPage });
 
+<<<<<<< HEAD
 type PaymentMethod = "transferencia" | "tarjeta" | "efectivo";
+=======
+type PaymentMethod = "transferencia_mp" | "tarjeta" | "efectivo";
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -43,7 +51,11 @@ function CheckoutPage() {
     notas: "",
   });
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+<<<<<<< HEAD
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("tarjeta");
+=======
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("transferencia_mp");
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
   const [busy, setBusy] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -54,6 +66,13 @@ function CheckoutPage() {
   function setProvincia(provincia: string) {
     setForm((current) => ({ ...current, provincia }));
     setSelectedShipping(null);
+  }
+
+  function setShipping(option: ShippingOption | null) {
+    setSelectedShipping(option);
+    if (option?.codigo_servicio !== LOCAL_PICKUP_CODE && paymentMethod === "efectivo") {
+      setPaymentMethod("transferencia_mp");
+    }
   }
 
   useEffect(() => {
@@ -116,6 +135,10 @@ function CheckoutPage() {
       toast.error("Selecciona una opcion de envio");
       return;
     }
+    if (paymentMethod === "efectivo" && !isLocalPickup) {
+      toast.error("El pago en efectivo solo esta disponible con retiro en local");
+      return;
+    }
     setBusy(true);
     try {
       const res = await orderFn({
@@ -135,7 +158,13 @@ function CheckoutPage() {
           envio: {
             shipping_option_id: selectedShipping.id,
           },
+<<<<<<< HEAD
           metodo_pago: paymentMethod,
+=======
+          pago: {
+            metodo: paymentMethod,
+          },
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
           notas: form.notas || null,
         },
       });
@@ -146,7 +175,11 @@ function CheckoutPage() {
       } else if (res.mpConfigured) {
         toast.error(res.error ?? "No se pudo iniciar el pago con Mercado Pago. Intenta de nuevo.");
       } else {
+<<<<<<< HEAD
         toast.success(getSuccessMessage(paymentMethod));
+=======
+        toast.success(paymentMethod === "efectivo" ? "Pedido creado. Te esperamos en el local." : "Pedido creado. Te contactamos para coordinar el pago.");
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
         navigate({ to: "/cuenta" });
       }
     } catch (err) {
@@ -185,12 +218,13 @@ function CheckoutPage() {
                   provincia={form.provincia}
                   codigoPostal={form.codigo_postal}
                   ciudad={form.ciudad}
-                  onShippingSelect={setSelectedShipping}
+                  onShippingSelect={setShipping}
                   selectedShipping={selectedShipping?.codigo_servicio}
                 />
               </div>
             </Section>
 
+<<<<<<< HEAD
             <Section title="Metodo de pago">
               <PaymentMethodSelector
                 value={paymentMethod}
@@ -199,6 +233,49 @@ function CheckoutPage() {
                 disabled={!selectedShipping}
               />
             </Section>
+=======
+            {selectedShipping && (
+              <Section title="Metodo de pago">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <PaymentOption
+                    value="transferencia_mp"
+                    selected={paymentMethod}
+                    onSelect={setPaymentMethod}
+                    icon={<Landmark className="size-4" />}
+                    title="Transferencia"
+                    description="Pagas por Mercado Pago y el pedido se verifica automaticamente."
+                  />
+                  <PaymentOption
+                    value="tarjeta"
+                    selected={paymentMethod}
+                    onSelect={setPaymentMethod}
+                    icon={<CreditCard className="size-4" />}
+                    title="Tarjeta"
+                    description="Te redirigimos a Mercado Pago para completar y validar el pago."
+                  />
+                  {isLocalPickup && (
+                    <PaymentOption
+                      value="efectivo"
+                      selected={paymentMethod}
+                      onSelect={setPaymentMethod}
+                      icon={<Banknote className="size-4" />}
+                      title="Efectivo"
+                      description="Disponible solo para retiro por el local."
+                    />
+                  )}
+                </div>
+                {paymentMethod === "tarjeta" && (
+                  <div className="mt-3 border border-border bg-surface-elevated p-4 text-sm text-muted-foreground flex gap-3">
+                    <ShieldCheck className="size-5 shrink-0 text-primary" />
+                    <div>
+                      <p className="font-medium text-foreground">Verificacion de tarjeta</p>
+                      <p>La aprobacion se confirma con Mercado Pago. Cuando el pago figure aprobado, el pedido pasa a pagado automaticamente.</p>
+                    </div>
+                  </div>
+                )}
+              </Section>
+            )}
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
 
             <Section title="Notas (opcional)">
               <textarea
@@ -235,12 +312,21 @@ function CheckoutPage() {
               disabled={busy || !selectedShipping}
               className="w-full bg-primary text-primary-foreground py-3 font-display tracking-wide hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
+<<<<<<< HEAD
               <CreditCard className="size-4" /> {busy ? "Procesando..." : getSubmitLabel(paymentMethod)}
             </button>
             <p className="text-xs text-muted-foreground text-center">
               {paymentMethod === "tarjeta"
                 ? "El servidor valida precios, envio y total antes de redirigirte a Mercado Pago."
                 : "El servidor valida precios, envio y total antes de crear el pedido."}
+=======
+              {buttonIcon(paymentMethod)} {busy ? "Procesando..." : buttonText(paymentMethod)}
+            </button>
+            <p className="text-xs text-muted-foreground text-center">
+              {paymentMethod === "efectivo"
+                ? "El servidor valida precios, retiro y total antes de crear el pedido."
+                : "El servidor valida precios, envio y total antes de redirigirte a Mercado Pago."}
+>>>>>>> e708b8bda8ce374b78fcf230bc919a09957cd739
             </p>
             <a href="https://wa.me/5493548403666" target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-primary text-center flex items-center justify-center gap-1">
               <MessageCircle className="size-3" /> Pagar por transferencia / consultar
@@ -250,6 +336,50 @@ function CheckoutPage() {
       </div>
     </Layout>
   );
+}
+
+function PaymentOption({
+  value,
+  selected,
+  onSelect,
+  icon,
+  title,
+  description,
+}: {
+  value: PaymentMethod;
+  selected: PaymentMethod;
+  onSelect: (value: PaymentMethod) => void;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  const active = value === selected;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(value)}
+      className={`border p-4 text-left transition hover:border-primary ${active ? "border-primary bg-primary/5" : "border-border bg-background"}`}
+      aria-pressed={active}
+    >
+      <span className="flex items-center gap-2 font-medium text-foreground">
+        {icon}
+        {title}
+      </span>
+      <span className="mt-2 block text-sm text-muted-foreground">{description}</span>
+    </button>
+  );
+}
+
+function buttonText(paymentMethod: PaymentMethod) {
+  if (paymentMethod === "tarjeta") return "Pagar con tarjeta";
+  if (paymentMethod === "efectivo") return "Confirmar pedido en efectivo";
+  return "Pagar transferencia";
+}
+
+function buttonIcon(paymentMethod: PaymentMethod) {
+  if (paymentMethod === "efectivo") return <Banknote className="size-4" />;
+  if (paymentMethod === "transferencia_mp") return <Landmark className="size-4" />;
+  return <CreditCard className="size-4" />;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
