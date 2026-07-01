@@ -449,7 +449,7 @@ function chunkRows<T>(rows: T[], size: number) {
   return chunks;
 }
 
-const IMPORT_CHUNK_SIZE = 100;
+const IMPORT_CHUNK_SIZE = 500;
 const IMPORT_PREVIEW_PAGE_SIZE = 50;
 
 type ImportPreview = {
@@ -495,11 +495,21 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   }
 
   async function apply() {
-    if (!rows.length) return;
+    if (!rows.length || !preview) return;
     setBusy(true);
     try {
-      setStatus(`Importando ${rows.length} productos...`);
-      await onImport(rows);
+      const changedSkus = new Set([
+        ...preview.created.map((r) => r.sku),
+        ...preview.updated.map((u) => u.row.sku),
+      ]);
+      const filteredRows = rows.filter((r) => changedSkus.has(r.sku));
+      if (!filteredRows.length) {
+        toast.info("No hay cambios para importar");
+        setBusy(false);
+        return;
+      }
+      setStatus(`Importando ${filteredRows.length} productos (${preview.created.length} nuevos, ${preview.updated.length} modificados)...`);
+      await onImport(filteredRows);
     } catch (e: any) {
       toast.error(formatError(e));
     } finally {
@@ -547,7 +557,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
         )}
 
         <div className="flex items-center justify-between gap-3 mt-5">
-          <span className="text-xs text-muted-foreground">{status || (rows.length ? `${rows.length} filas listas para importar` : "Esperando archivo")}</span>
+          <span className="text-xs text-muted-foreground">{status || (preview ? `${preview.created.length + preview.updated.length} productos para importar (${preview.unchanged} sin cambios se omiten)` : rows.length ? `${rows.length} filas leídas` : "Esperando archivo")}</span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm">Cancelar</button>
             <button disabled={busy || rows.length === 0} onClick={apply} className="bg-primary text-primary-foreground px-5 py-2 text-sm font-medium disabled:opacity-50">
