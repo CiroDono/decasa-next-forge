@@ -7,6 +7,7 @@ import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, Ba
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
   adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp, adminPreviewImportProductosErp,
+  adminFetchErpCompareData,
 } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
@@ -39,6 +40,7 @@ function AdminProductos() {
   const bulk = useServerFn(adminBulkProductos);
   const importErp = useServerFn(adminImportProductosErp);
   const previewImportErp = useServerFn(adminPreviewImportProductosErp);
+  const fetchErpCompareData = useServerFn(adminFetchErpCompareData);
   const listCategorias = useServerFn(adminListCategorias);
   const listGrupos = useServerFn(adminListGrupos);
 
@@ -347,7 +349,61 @@ function AdminProductos() {
       )}
 
       {editing && <ProductoModal value={editing} categorias={categorias ?? []} grupos={grupos ?? []} onClose={() => setEditing(null)} onSave={save} />}
-      {importOpen && <ErpImportModal onClose={() => setImportOpen(false)} onImport={importRows} onPreview={(rows) => previewImportErp({ data: { rows } })} />}
+      {importOpen && (
+        <ErpImportModal
+          onClose={() => setImportOpen(false)}
+          onImport={importRows}
+          onPreview={async (rows, onStatus) => {
+            onStatus("Descargando catálogo existente para comparar...");
+            const existing = await fetchErpCompareData();
+            
+            onStatus(`Comparando ${rows.length} productos...`);
+            const bySku = new Map<string, any>();
+            for (const item of existing) {
+              if (item.sku) {
+                bySku.set(item.sku, item);
+              }
+            }
+
+            const created: ErpImportRow[] = [];
+            const updated: Array<{ row: ErpImportRow; current: any; changes: Array<{ field: string; before: any; after: any }> }> = [];
+            let unchanged = 0;
+
+            function sameNumber(a: unknown, b: unknown) {
+              if (a == null && b == null) return true;
+              const na = Number(a);
+              const nb = Number(b);
+              return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.001;
+            }
+
+            for (const row of rows) {
+              const current = bySku.get(row.sku);
+              if (!current) {
+                created.push(row);
+                continue;
+              }
+
+              const changes = [
+                { field: "nombre", before: current.nombre, after: row.nombre, same: String(current.nombre ?? "") === row.nombre },
+                { field: "codigo_fabricante", before: current.codigo_fabricante, after: row.codigo_fabricante, same: String(current.codigo_fabricante ?? "") === String(row.codigo_fabricante ?? "") },
+                { field: "precio_vta_sin_iva", before: current.precio_vta_sin_iva, after: row.precio_vta_sin_iva, same: sameNumber(current.precio_vta_sin_iva, row.precio_vta_sin_iva) },
+                { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
+              ].filter((change) => !change.same).map(({ same, ...change }) => change);
+
+              if (changes.length) {
+                updated.push({ row, current, changes });
+              } else {
+                unchanged++;
+              }
+            }
+
+            created.sort((a, b) => compareProductName(a.nombre, b.nombre));
+            updated.sort((a, b) => compareProductName(a.row.nombre, b.row.nombre));
+
+            return { created, updated, unchanged };
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -461,7 +517,7 @@ type ImportPreview = {
 function ErpImportModal({ onClose, onImport, onPreview }: {
   onClose: () => void;
   onImport: (rows: ErpImportRow[]) => Promise<void>;
-  onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>;
+  onPreview: (rows: ErpImportRow[], onStatus: (status: string) => void) => Promise<ImportPreview>;
 }) {
   const [rows, setRows] = useState<ErpImportRow[]>([]);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -483,8 +539,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
       setUpdatedPage(1);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
       else {
-        setStatus(`Analizando ${parsed.length} productos...`);
-        setPreview(await previewRows(parsed, onPreview, setStatus));
+        setPreview(await onPreview(parsed, setStatus));
       }
     } catch (e: any) {
       toast.error(formatError(e));
@@ -570,21 +625,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   );
 }
 
-async function previewRows(rows: ErpImportRow[], onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>, onStatus: (status: string) => void) {
-  const summary: ImportPreview = { created: [], updated: [], unchanged: 0 };
-  const chunks = chunkRows(rows, IMPORT_CHUNK_SIZE);
-  for (let i = 0; i < chunks.length; i++) {
-    onStatus(`Analizando lote ${i + 1} de ${chunks.length}`);
-    const chunk = chunks[i];
-    const partial = await onPreview(chunk);
-    summary.created.push(...partial.created);
-    summary.updated.push(...partial.updated);
-    summary.unchanged += partial.unchanged;
-  }
-  summary.created.sort((a, b) => compareProductName(a.nombre, b.nombre));
-  summary.updated.sort((a, b) => compareProductName(a.row.nombre, b.row.nombre));
-  return summary;
-}
+
 
 function compareProductName(a: string, b: string) {
   return a.localeCompare(b, "es", { sensitivity: "base", numeric: true });

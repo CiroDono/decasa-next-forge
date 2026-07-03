@@ -354,7 +354,11 @@ export const adminPreviewImportProductosErp = createServerFn({ method: "POST" })
         { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
       ].filter((change) => !change.same).map(({ same, ...change }) => change);
 
-      return { created, updated, unchanged };
+      if (changes.length) updated.push({ row, current, changes });
+      else unchanged++;
+    }
+
+    return { created, updated, unchanged };
   });
 
 export const adminFetchErpCompareData = createServerFn({ method: "GET" })
