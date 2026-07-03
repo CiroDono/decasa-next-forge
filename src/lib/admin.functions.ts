@@ -354,11 +354,28 @@ export const adminPreviewImportProductosErp = createServerFn({ method: "POST" })
         { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
       ].filter((change) => !change.same).map(({ same, ...change }) => change);
 
-      if (changes.length) updated.push({ row, current, changes });
-      else unchanged++;
-    }
+      return { created, updated, unchanged };
+  });
 
-    return { created, updated, unchanged };
+export const adminFetchErpCompareData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const allRows: Array<{ sku: string; nombre: string | null; codigo_fabricante: string | null; precio_vta_sin_iva: number | null; precio: number | null }> = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await context.supabase
+        .from("productos")
+        .select("sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio")
+        .not("sku", "is", null)
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      allRows.push(...(data ?? []));
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    return allRows;
   });
 
 // === PRODUCT IMAGES (galería) ===
