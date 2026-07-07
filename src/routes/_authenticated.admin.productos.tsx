@@ -258,7 +258,7 @@ function AdminProductos() {
       </div>
 
       <div className="hidden border border-border overflow-x-auto lg:block">
-        <table className="w-full min-w-[980px] text-sm">
+        <table className="w-full min-w-[1200px] text-sm">
           <thead className="bg-secondary text-secondary-foreground">
             <tr>
               <th className="px-3 py-2 w-10">
@@ -277,6 +277,8 @@ function AdminProductos() {
               <th className="text-left px-3 py-2 hidden md:table-cell">SKU</th>
               <th className="text-left px-3 py-2 hidden xl:table-cell">Cód. fabricante</th>
               <th className="text-left px-3 py-2 hidden lg:table-cell">Categoría</th>
+              <th className="text-left px-3 py-2 hidden xl:table-cell">Grupo</th>
+              <th className="text-right px-3 py-2 hidden xl:table-cell">Sin IVA</th>
               <th className="text-right px-3 py-2">
                 <SortHeader label="Precio" active={sortBy === "precio"} dir={sortDir} align="right" onClick={() => changeSort("precio")} />
               </th>
@@ -308,6 +310,8 @@ function AdminProductos() {
                   <td className="px-3 py-2 hidden md:table-cell text-muted-foreground">{p.sku}</td>
                   <td className="px-3 py-2 hidden xl:table-cell text-muted-foreground">{p.codigo_fabricante || "-"}</td>
                   <td className="px-3 py-2 hidden lg:table-cell text-muted-foreground">{p.categoria}</td>
+                  <td className="px-3 py-2 hidden xl:table-cell text-muted-foreground">{p.grupo || "-"}</td>
+                  <td className="px-3 py-2 hidden xl:table-cell text-right text-muted-foreground">{p.precio_vta_sin_iva != null ? formatARS(Number(p.precio_vta_sin_iva)) : "-"}</td>
                   <td className="px-3 py-2 text-right">
                     {enOferta ? (
                       <span>
