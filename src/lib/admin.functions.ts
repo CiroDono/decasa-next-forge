@@ -382,6 +382,48 @@ export const adminFetchErpCompareData = createServerFn({ method: "GET" })
     return allRows;
   });
 
+export const adminExportProductos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    q: z.string().max(100).optional().nullable(),
+    cat: z.string().max(100).optional().nullable(),
+    grupo: z.string().max(100).optional().nullable(),
+    activo: z.enum(["all", "yes", "no"]).optional(),
+    ids: z.array(z.number().int()).optional().nullable(),
+  }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    let q = context.supabase
+      .from("productos")
+      .select("id, sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio, stock, categoria, grupo, activo, descripcion, precio_oferta, oferta_hasta, image_url, image_webp")
+      .order("id", { ascending: false });
+
+    if (data.ids && data.ids.length > 0) {
+      q = q.in("id", data.ids);
+    } else {
+      if (data.q) {
+        const term = data.q.replace(/[%_,]/g, "\\$&");
+        q = q.or(`nombre.ilike.%${term}%,sku.ilike.%${term}%,codigo_fabricante.ilike.%${term}%`);
+      }
+      if (data.cat) q = q.eq("categoria", data.cat);
+      if (data.grupo) q = q.eq("grupo", data.grupo);
+      if (data.activo === "yes") q = q.eq("activo", true);
+      if (data.activo === "no") q = q.eq("activo", false);
+    }
+
+    const allRows: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: rows, error } = await q.range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      allRows.push(...(rows ?? []));
+      if (!rows || rows.length < pageSize) break;
+      from += pageSize;
+    }
+    return allRows;
+  });
+
 // === PRODUCT IMAGES (galería) ===
 
 export const adminListProductImages = createServerFn({ method: "GET" })

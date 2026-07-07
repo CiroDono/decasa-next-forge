@@ -3,11 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
   adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp, adminPreviewImportProductosErp,
-  adminFetchErpCompareData,
+  adminFetchErpCompareData, adminExportProductos,
 } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
@@ -41,8 +41,11 @@ function AdminProductos() {
   const importErp = useServerFn(adminImportProductosErp);
   const previewImportErp = useServerFn(adminPreviewImportProductosErp);
   const fetchErpCompareData = useServerFn(adminFetchErpCompareData);
+  const exportProductos = useServerFn(adminExportProductos);
   const listCategorias = useServerFn(adminListCategorias);
   const listGrupos = useServerFn(adminListGrupos);
+
+  const [exporting, setExporting] = useState(false);
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -66,14 +69,14 @@ function AdminProductos() {
   const { data: grupos } = useQuery({ queryKey: ["admin-grupos"], queryFn: () => listGrupos() });
 
   const pageIds = useMemo(() => (data?.rows ?? []).map((p: any) => p.id as number), [data]);
-  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const someOnPageSelected = pageIds.some((id) => selected.has(id));
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id: number) => selected.has(id));
+  const someOnPageSelected = pageIds.some((id: number) => selected.has(id));
 
   function togglePage() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allOnPageSelected) pageIds.forEach((id) => next.delete(id));
-      else pageIds.forEach((id) => next.add(id));
+      if (allOnPageSelected) pageIds.forEach((id: number) => next.delete(id));
+      else pageIds.forEach((id: number) => next.add(id));
       return next;
     });
   }
@@ -92,6 +95,56 @@ function AdminProductos() {
     } else {
       setSortBy(nextSortBy);
       setSortDir(nextSortBy === "nombre" ? "asc" : "desc");
+    }
+  }
+
+  async function handleExport() {
+    try {
+      setExporting(true);
+      toast.info(selected.size > 0 ? `Exportando ${selected.size} productos seleccionados...` : "Exportando productos...");
+      
+      const payload: any = {};
+      if (selected.size > 0) {
+        payload.ids = Array.from(selected);
+      } else {
+        payload.q = q || null;
+        payload.cat = cat || null;
+        payload.grupo = grupo || null;
+        payload.activo = activo;
+      }
+
+      const rows = await exportProductos({ data: payload });
+      if (!rows || !rows.length) {
+        toast.error("No hay productos para exportar");
+        return;
+      }
+
+      const XLSX = await import("xlsx");
+      const formatted = rows.map((r: any) => ({
+        ID: r.id,
+        SKU: r.sku || "",
+        Nombre: r.nombre || "",
+        "Cód. Fabricante": r.codigo_fabricante || "",
+        "Precio sin IVA": r.precio_vta_sin_iva || 0,
+        Precio: r.precio || 0,
+        Stock: r.stock || 0,
+        Categoría: r.categoria || "",
+        Grupo: r.grupo || "",
+        Activo: r.activo !== false ? "Sí" : "No",
+        Descripción: r.descripcion || "",
+        "Precio Oferta": r.precio_oferta || "",
+        "Oferta Vence": r.oferta_hasta ? new Date(r.oferta_hasta).toLocaleString() : "",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formatted);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
+      XLSX.writeFile(workbook, `productos_export_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success("Productos exportados con éxito");
+    } catch (e: any) {
+      toast.error(e?.message || "Error al exportar productos");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -162,7 +215,7 @@ function AdminProductos() {
 
   return (
     <div className="pb-32">
-      <div className="grid gap-2 mb-4 sm:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_180px_180px_170px_auto_auto] lg:items-center">
+      <div className="grid gap-2 mb-4 sm:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_180px_180px_170px_auto_auto_auto] lg:items-center">
         <div className="relative sm:col-span-2 lg:col-span-1">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -174,13 +227,13 @@ function AdminProductos() {
         </div>
         <SearchSelect
           placeholder="Buscar categoría..."
-          options={categorias ?? []}
+          options={(categorias as string[]) ?? []}
           value={cat}
           onChange={(c) => { setCat(c); setPage(1); }}
         />
         <SearchSelect
           placeholder="Buscar Grupos..."
-          options={grupos ?? []}
+          options={(grupos as string[]) ?? []}
           value={grupo}
           onChange={(g) => { setGrupo(g); setPage(1); }}
         />
@@ -194,6 +247,13 @@ function AdminProductos() {
         </button>
         <button onClick={() => setImportOpen(true)} className="w-full justify-center border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary">
           <Upload className="size-4" /> Importar ERP
+        </button>
+        <button 
+          onClick={handleExport} 
+          disabled={exporting}
+          className="w-full justify-center border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary disabled:opacity-50"
+        >
+          <Download className="size-4" /> {exporting ? "Exportando..." : "Exportar Excel"}
         </button>
       </div>
 
@@ -341,14 +401,14 @@ function AdminProductos() {
         <BulkDialog
           kind={bulkOpen}
           count={selected.size}
-          categorias={categorias ?? []}
-          grupos={grupos ?? []}
+          categorias={(categorias as string[]) ?? []}
+          grupos={(grupos as string[]) ?? []}
           onClose={() => setBulkOpen(null)}
           onConfirm={runBulk}
         />
       )}
 
-      {editing && <ProductoModal value={editing} categorias={categorias ?? []} grupos={grupos ?? []} onClose={() => setEditing(null)} onSave={save} />}
+      {editing && <ProductoModal value={editing} categorias={(categorias as string[]) ?? []} grupos={(grupos as string[]) ?? []} onClose={() => setEditing(null)} onSave={save} />}
       {importOpen && (
         <ErpImportModal
           onClose={() => setImportOpen(false)}
