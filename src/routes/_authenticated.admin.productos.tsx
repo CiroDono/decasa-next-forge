@@ -448,10 +448,34 @@ function AdminProductos() {
                 { field: "codigo_fabricante", before: current.codigo_fabricante, after: row.codigo_fabricante, same: String(current.codigo_fabricante ?? "") === String(row.codigo_fabricante ?? "") },
                 { field: "precio_vta_sin_iva", before: current.precio_vta_sin_iva, after: row.precio_vta_sin_iva, same: sameNumber(current.precio_vta_sin_iva, row.precio_vta_sin_iva) },
                 { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
-              ].filter((change) => !change.same).map(({ same, ...change }) => change);
+              ];
 
-              if (changes.length) {
-                updated.push({ row, current, changes });
+              if (row.categoria !== undefined) {
+                changes.push({ field: "categoria", before: current.categoria, after: row.categoria, same: String(current.categoria ?? "") === String(row.categoria ?? "") });
+              }
+              if (row.grupo !== undefined) {
+                changes.push({ field: "grupo", before: current.grupo, after: row.grupo, same: String(current.grupo ?? "") === String(row.grupo ?? "") });
+              }
+              if (row.stock !== undefined && row.stock !== null) {
+                changes.push({ field: "stock", before: current.stock, after: row.stock, same: Number(current.stock ?? 0) === Number(row.stock ?? 0) });
+              }
+              if (row.descripcion !== undefined) {
+                changes.push({ field: "descripcion", before: current.descripcion, after: row.descripcion, same: String(current.descripcion ?? "") === String(row.descripcion ?? "") });
+              }
+              if (row.activo !== undefined && row.activo !== null) {
+                changes.push({ field: "activo", before: current.activo, after: row.activo, same: Boolean(current.activo) === Boolean(row.activo) });
+              }
+              if (row.precio_oferta !== undefined) {
+                changes.push({ field: "precio_oferta", before: current.precio_oferta, after: row.precio_oferta, same: sameNumber(current.precio_oferta, row.precio_oferta) });
+              }
+              if (row.oferta_hasta !== undefined) {
+                changes.push({ field: "oferta_hasta", before: current.oferta_hasta, after: row.oferta_hasta, same: String(current.oferta_hasta ?? "") === String(row.oferta_hasta ?? "") });
+              }
+
+              const filteredChanges = changes.filter((change) => !change.same).map(({ same, ...change }) => change);
+
+              if (filteredChanges.length) {
+                updated.push({ row, current, changes: filteredChanges });
               } else {
                 unchanged++;
               }
@@ -702,6 +726,14 @@ function formatError(error: any) {
 
 function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
   if (!rows.length) return <div className="border border-border p-6 text-sm text-muted-foreground">No hay productos nuevos en este archivo.</div>;
+
+  const hasCategoria = rows.some((r) => r.categoria !== undefined);
+  const hasGrupo = rows.some((r) => r.grupo !== undefined);
+  const hasStock = rows.some((r) => r.stock !== undefined && r.stock !== null);
+  const hasDescripcion = rows.some((r) => r.descripcion !== undefined);
+  const hasActivo = rows.some((r) => r.activo !== undefined && r.activo !== null);
+  const hasOferta = rows.some((r) => r.precio_oferta !== undefined);
+
   return (
     <div className="border border-border max-h-72 overflow-auto">
       <table className="w-full text-xs text-foreground">
@@ -712,6 +744,12 @@ function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
             <th className="text-left px-3 py-2">Cód. fabricante</th>
             <th className="text-right px-3 py-2">Sin IVA</th>
             <th className="text-right px-3 py-2">Venta</th>
+            {hasCategoria && <th className="text-left px-3 py-2">Categoría</th>}
+            {hasGrupo && <th className="text-left px-3 py-2">Grupo</th>}
+            {hasStock && <th className="text-right px-3 py-2">Stock</th>}
+            {hasActivo && <th className="text-center px-3 py-2">Estado</th>}
+            {hasOferta && <th className="text-right px-3 py-2">Oferta</th>}
+            {hasDescripcion && <th className="text-left px-3 py-2">Descripción</th>}
           </tr>
         </thead>
         <tbody>
@@ -722,6 +760,12 @@ function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
               <td className="px-3 py-2 text-muted-foreground">{row.codigo_fabricante ?? "-"}</td>
               <td className="px-3 py-2 text-right">{row.precio_vta_sin_iva != null ? formatARS(row.precio_vta_sin_iva) : "-"}</td>
               <td className="px-3 py-2 text-right">{formatARS(row.precio)}</td>
+              {hasCategoria && <td className="px-3 py-2">{row.categoria ?? "-"}</td>}
+              {hasGrupo && <td className="px-3 py-2">{row.grupo ?? "-"}</td>}
+              {hasStock && <td className="px-3 py-2 text-right">{row.stock ?? "-"}</td>}
+              {hasActivo && <td className="px-3 py-2 text-center">{row.activo == null ? "-" : row.activo ? "Activo" : "Inactivo"}</td>}
+              {hasOferta && <td className="px-3 py-2 text-right">{row.precio_oferta != null ? formatARS(row.precio_oferta) : "-"}</td>}
+              {hasDescripcion && <td className="px-3 py-2 max-w-[200px] truncate">{row.descripcion ?? "-"}</td>}
             </tr>
           ))}
         </tbody>
@@ -802,13 +846,22 @@ function fieldLabel(field: string) {
     codigo_fabricante: "Cód. fabricante",
     precio_vta_sin_iva: "Precio sin IVA",
     precio: "Precio venta",
+    categoria: "Categoría",
+    grupo: "Grupo",
+    stock: "Stock",
+    descripcion: "Descripción",
+    activo: "Estado",
+    precio_oferta: "Precio oferta",
+    oferta_hasta: "Oferta hasta",
   };
   return labels[field] ?? field;
 }
 
 function formatImportValue(field: string, value: unknown) {
   if (value == null || value === "") return "-";
-  if (field === "precio" || field === "precio_vta_sin_iva") return formatARS(Number(value));
+  if (field === "precio" || field === "precio_vta_sin_iva" || field === "precio_oferta") return formatARS(Number(value));
+  if (field === "activo") return value ? "Activo" : "Inactivo";
+  if (field === "stock") return String(Number(value));
   return String(value);
 }
 
