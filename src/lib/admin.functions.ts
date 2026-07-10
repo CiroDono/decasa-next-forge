@@ -263,6 +263,13 @@ const erpImportRowSchema = z.object({
   codigo_fabricante: z.string().max(120).optional().nullable(),
   precio_vta_sin_iva: z.number().nonnegative().nullable().optional(),
   precio: z.number().nonnegative(),
+  categoria: z.string().max(100).optional().nullable(),
+  grupo: z.string().max(100).optional().nullable(),
+  stock: z.number().int().optional().nullable(),
+  descripcion: z.string().max(5000).optional().nullable(),
+  activo: z.boolean().optional().nullable(),
+  precio_oferta: z.number().nonnegative().optional().nullable(),
+  oferta_hasta: z.string().optional().nullable(),
 });
 
 export const adminImportProductosErp = createServerFn({ method: "POST" })
@@ -287,7 +294,7 @@ export const adminImportProductosErp = createServerFn({ method: "POST" })
     let updated = 0;
 
     for (const row of data.rows) {
-      const payload = {
+      const payload: any = {
         sku: row.sku,
         nombre: row.nombre,
         codigo_fabricante: row.codigo_fabricante ?? null,
@@ -296,17 +303,27 @@ export const adminImportProductosErp = createServerFn({ method: "POST" })
         erp_updated_at: now,
         last_import_id: importId,
       };
+
+      if (row.categoria !== undefined) payload.categoria = row.categoria;
+      if (row.grupo !== undefined) payload.grupo = row.grupo;
+      if (row.stock !== undefined && row.stock !== null) payload.stock = row.stock;
+      if (row.descripcion !== undefined) payload.descripcion = row.descripcion;
+      if (row.activo !== undefined && row.activo !== null) payload.activo = row.activo;
+      if (row.precio_oferta !== undefined) payload.precio_oferta = row.precio_oferta;
+      if (row.oferta_hasta !== undefined) payload.oferta_hasta = row.oferta_hasta;
+
       const id = bySku.get(row.sku);
       if (id) {
         const { error } = await sb.from("productos").update(payload).eq("id", id);
         if (error) throw new Error(error.message);
         updated++;
       } else {
-        const { error } = await sb.from("productos").insert({
+        const insertPayload = {
           ...payload,
-          stock: 0,
-          activo: false,
-        });
+          stock: row.stock ?? 0,
+          activo: row.activo ?? false,
+        };
+        const { error } = await sb.from("productos").insert(insertPayload);
         if (error) throw new Error(error.message);
         created++;
       }
@@ -325,7 +342,7 @@ export const adminPreviewImportProductosErp = createServerFn({ method: "POST" })
     const skus = data.rows.map((row) => row.sku);
     const { data: existing, error } = await context.supabase
       .from("productos")
-      .select("id, sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio")
+      .select("id, sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio, categoria, grupo, stock, descripcion, activo, precio_oferta, oferta_hasta")
       .in("sku", skus);
     if (error) throw new Error(error.message);
 
@@ -352,13 +369,100 @@ export const adminPreviewImportProductosErp = createServerFn({ method: "POST" })
         { field: "codigo_fabricante", before: current.codigo_fabricante, after: row.codigo_fabricante, same: String(current.codigo_fabricante ?? "") === String(row.codigo_fabricante ?? "") },
         { field: "precio_vta_sin_iva", before: current.precio_vta_sin_iva, after: row.precio_vta_sin_iva, same: sameNumber(current.precio_vta_sin_iva, row.precio_vta_sin_iva) },
         { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
-      ].filter((change) => !change.same).map(({ same, ...change }) => change);
+      ];
 
-      if (changes.length) updated.push({ row, current, changes });
+      if (row.categoria !== undefined) {
+        changes.push({ field: "categoria", before: current.categoria, after: row.categoria, same: String(current.categoria ?? "") === String(row.categoria ?? "") });
+      }
+      if (row.grupo !== undefined) {
+        changes.push({ field: "grupo", before: current.grupo, after: row.grupo, same: String(current.grupo ?? "") === String(row.grupo ?? "") });
+      }
+      if (row.stock !== undefined && row.stock !== null) {
+        changes.push({ field: "stock", before: current.stock, after: row.stock, same: Number(current.stock ?? 0) === Number(row.stock ?? 0) });
+      }
+      if (row.descripcion !== undefined) {
+        changes.push({ field: "descripcion", before: current.descripcion, after: row.descripcion, same: String(current.descripcion ?? "") === String(row.descripcion ?? "") });
+      }
+      if (row.activo !== undefined && row.activo !== null) {
+        changes.push({ field: "activo", before: current.activo, after: row.activo, same: Boolean(current.activo) === Boolean(row.activo) });
+      }
+      if (row.precio_oferta !== undefined) {
+        changes.push({ field: "precio_oferta", before: current.precio_oferta, after: row.precio_oferta, same: sameNumber(current.precio_oferta, row.precio_oferta) });
+      }
+      if (row.oferta_hasta !== undefined) {
+        changes.push({ field: "oferta_hasta", before: current.oferta_hasta, after: row.oferta_hasta, same: String(current.oferta_hasta ?? "") === String(row.oferta_hasta ?? "") });
+      }
+
+      const filteredChanges = changes.filter((change) => !change.same).map(({ same, ...change }) => change);
+
+      if (filteredChanges.length) updated.push({ row, current, changes: filteredChanges });
       else unchanged++;
     }
 
     return { created, updated, unchanged };
+  });
+
+export const adminFetchErpCompareData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const allRows: Array<{ sku: string; nombre: string | null; codigo_fabricante: string | null; precio_vta_sin_iva: number | null; precio: number | null; categoria: string | null; grupo: string | null; stock: number | null; descripcion: string | null; activo: boolean | null; precio_oferta: number | null; oferta_hasta: string | null }> = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await context.supabase
+        .from("productos")
+        .select("sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio, categoria, grupo, stock, descripcion, activo, precio_oferta, oferta_hasta")
+        .not("sku", "is", null)
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      allRows.push(...(data ?? []));
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    return allRows;
+  });
+
+export const adminExportProductos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    q: z.string().max(100).optional().nullable(),
+    cat: z.string().max(100).optional().nullable(),
+    grupo: z.string().max(100).optional().nullable(),
+    activo: z.enum(["all", "yes", "no"]).optional(),
+    ids: z.array(z.number().int()).optional().nullable(),
+  }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    let q = context.supabase
+      .from("productos")
+      .select("id, sku, nombre, codigo_fabricante, precio_vta_sin_iva, precio, stock, categoria, grupo, activo, descripcion, precio_oferta, oferta_hasta, image_url, image_webp")
+      .order("id", { ascending: false });
+
+    if (data.ids && data.ids.length > 0) {
+      q = q.in("id", data.ids);
+    } else {
+      if (data.q) {
+        const term = data.q.replace(/[%_,]/g, "\\$&");
+        q = q.or(`nombre.ilike.%${term}%,sku.ilike.%${term}%,codigo_fabricante.ilike.%${term}%`);
+      }
+      if (data.cat) q = q.eq("categoria", data.cat);
+      if (data.grupo) q = q.eq("grupo", data.grupo);
+      if (data.activo === "yes") q = q.eq("activo", true);
+      if (data.activo === "no") q = q.eq("activo", false);
+    }
+
+    const allRows: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: rows, error } = await q.range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      allRows.push(...(rows ?? []));
+      if (!rows || rows.length < pageSize) break;
+      from += pageSize;
+    }
+    return allRows;
   });
 
 // === PRODUCT IMAGES (galería) ===

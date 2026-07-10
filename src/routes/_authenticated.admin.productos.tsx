@@ -3,10 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import {
   adminListProductos, adminUpsertProducto, adminDeleteProducto,
   adminListCategorias, adminListGrupos, adminBulkProductos, adminImportProductosErp, adminPreviewImportProductosErp,
+  adminFetchErpCompareData, adminExportProductos,
 } from "@/lib/admin.functions";
 import { formatARS } from "@/lib/format";
 import { ProductImage } from "@/components/ProductImage";
@@ -39,8 +40,12 @@ function AdminProductos() {
   const bulk = useServerFn(adminBulkProductos);
   const importErp = useServerFn(adminImportProductosErp);
   const previewImportErp = useServerFn(adminPreviewImportProductosErp);
+  const fetchErpCompareData = useServerFn(adminFetchErpCompareData);
+  const exportProductos = useServerFn(adminExportProductos);
   const listCategorias = useServerFn(adminListCategorias);
   const listGrupos = useServerFn(adminListGrupos);
+
+  const [exporting, setExporting] = useState(false);
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -64,14 +69,14 @@ function AdminProductos() {
   const { data: grupos } = useQuery({ queryKey: ["admin-grupos"], queryFn: () => listGrupos() });
 
   const pageIds = useMemo(() => (data?.rows ?? []).map((p: any) => p.id as number), [data]);
-  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const someOnPageSelected = pageIds.some((id) => selected.has(id));
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id: number) => selected.has(id));
+  const someOnPageSelected = pageIds.some((id: number) => selected.has(id));
 
   function togglePage() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allOnPageSelected) pageIds.forEach((id) => next.delete(id));
-      else pageIds.forEach((id) => next.add(id));
+      if (allOnPageSelected) pageIds.forEach((id: number) => next.delete(id));
+      else pageIds.forEach((id: number) => next.add(id));
       return next;
     });
   }
@@ -90,6 +95,56 @@ function AdminProductos() {
     } else {
       setSortBy(nextSortBy);
       setSortDir(nextSortBy === "nombre" ? "asc" : "desc");
+    }
+  }
+
+  async function handleExport() {
+    try {
+      setExporting(true);
+      toast.info(selected.size > 0 ? `Exportando ${selected.size} productos seleccionados...` : "Exportando productos...");
+      
+      const payload: any = {};
+      if (selected.size > 0) {
+        payload.ids = Array.from(selected);
+      } else {
+        payload.q = q || null;
+        payload.cat = cat || null;
+        payload.grupo = grupo || null;
+        payload.activo = activo;
+      }
+
+      const rows = await exportProductos({ data: payload });
+      if (!rows || !rows.length) {
+        toast.error("No hay productos para exportar");
+        return;
+      }
+
+      const XLSX = await import("xlsx");
+      const formatted = rows.map((r: any) => ({
+        ID: r.id,
+        SKU: r.sku || "",
+        Nombre: r.nombre || "",
+        "Cód. Fabricante": r.codigo_fabricante || "",
+        "Precio sin IVA": r.precio_vta_sin_iva || 0,
+        Precio: r.precio || 0,
+        Stock: r.stock || 0,
+        Categoría: r.categoria || "",
+        Grupo: r.grupo || "",
+        Activo: r.activo !== false ? "Sí" : "No",
+        Descripción: r.descripcion || "",
+        "Precio Oferta": r.precio_oferta || "",
+        "Oferta Vence": r.oferta_hasta ? new Date(r.oferta_hasta).toLocaleString() : "",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formatted);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
+      XLSX.writeFile(workbook, `productos_export_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success("Productos exportados con éxito");
+    } catch (e: any) {
+      toast.error(e?.message || "Error al exportar productos");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -160,7 +215,7 @@ function AdminProductos() {
 
   return (
     <div className="pb-32">
-      <div className="grid gap-2 mb-4 sm:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_180px_180px_170px_auto_auto] lg:items-center">
+      <div className="grid gap-2 mb-4 sm:grid-cols-2 lg:grid-cols-[minmax(260px,1fr)_180px_180px_170px_auto_auto_auto] lg:items-center">
         <div className="relative sm:col-span-2 lg:col-span-1">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -172,13 +227,13 @@ function AdminProductos() {
         </div>
         <SearchSelect
           placeholder="Buscar categoría..."
-          options={categorias ?? []}
+          options={(categorias as string[]) ?? []}
           value={cat}
           onChange={(c) => { setCat(c); setPage(1); }}
         />
         <SearchSelect
           placeholder="Buscar Grupos..."
-          options={grupos ?? []}
+          options={(grupos as string[]) ?? []}
           value={grupo}
           onChange={(g) => { setGrupo(g); setPage(1); }}
         />
@@ -193,10 +248,17 @@ function AdminProductos() {
         <button onClick={() => setImportOpen(true)} className="w-full justify-center border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary">
           <Upload className="size-4" /> Importar ERP
         </button>
+        <button 
+          onClick={handleExport} 
+          disabled={exporting}
+          className="w-full justify-center border border-border px-4 py-2 text-sm font-medium flex items-center gap-2 hover:border-primary disabled:opacity-50"
+        >
+          <Download className="size-4" /> {exporting ? "Exportando..." : "Exportar Excel"}
+        </button>
       </div>
 
       <div className="hidden border border-border overflow-x-auto lg:block">
-        <table className="w-full min-w-[980px] text-sm">
+        <table className="w-full min-w-[1200px] text-sm">
           <thead className="bg-secondary text-secondary-foreground">
             <tr>
               <th className="px-3 py-2 w-10">
@@ -215,6 +277,8 @@ function AdminProductos() {
               <th className="text-left px-3 py-2 hidden md:table-cell">SKU</th>
               <th className="text-left px-3 py-2 hidden xl:table-cell">Cód. fabricante</th>
               <th className="text-left px-3 py-2 hidden lg:table-cell">Categoría</th>
+              <th className="text-left px-3 py-2 hidden xl:table-cell">Grupo</th>
+              <th className="text-right px-3 py-2 hidden xl:table-cell">Sin IVA</th>
               <th className="text-right px-3 py-2">
                 <SortHeader label="Precio" active={sortBy === "precio"} dir={sortDir} align="right" onClick={() => changeSort("precio")} />
               </th>
@@ -246,6 +310,8 @@ function AdminProductos() {
                   <td className="px-3 py-2 hidden md:table-cell text-muted-foreground">{p.sku}</td>
                   <td className="px-3 py-2 hidden xl:table-cell text-muted-foreground">{p.codigo_fabricante || "-"}</td>
                   <td className="px-3 py-2 hidden lg:table-cell text-muted-foreground">{p.categoria}</td>
+                  <td className="px-3 py-2 hidden xl:table-cell text-muted-foreground">{p.grupo || "-"}</td>
+                  <td className="px-3 py-2 hidden xl:table-cell text-right text-muted-foreground">{p.precio_vta_sin_iva != null ? formatARS(Number(p.precio_vta_sin_iva)) : "-"}</td>
                   <td className="px-3 py-2 text-right">
                     {enOferta ? (
                       <span>
@@ -339,15 +405,93 @@ function AdminProductos() {
         <BulkDialog
           kind={bulkOpen}
           count={selected.size}
-          categorias={categorias ?? []}
-          grupos={grupos ?? []}
+          categorias={(categorias as string[]) ?? []}
+          grupos={(grupos as string[]) ?? []}
           onClose={() => setBulkOpen(null)}
           onConfirm={runBulk}
         />
       )}
 
-      {editing && <ProductoModal value={editing} categorias={categorias ?? []} grupos={grupos ?? []} onClose={() => setEditing(null)} onSave={save} />}
-      {importOpen && <ErpImportModal onClose={() => setImportOpen(false)} onImport={importRows} onPreview={(rows) => previewImportErp({ data: { rows } })} />}
+      {editing && <ProductoModal value={editing} categorias={(categorias as string[]) ?? []} grupos={(grupos as string[]) ?? []} onClose={() => setEditing(null)} onSave={save} />}
+      {importOpen && (
+        <ErpImportModal
+          onClose={() => setImportOpen(false)}
+          onImport={importRows}
+          onPreview={async (rows, onStatus) => {
+            onStatus("Descargando catálogo existente para comparar...");
+            const existing = await fetchErpCompareData();
+            
+            onStatus(`Comparando ${rows.length} productos...`);
+            const bySku = new Map<string, any>();
+            for (const item of existing) {
+              if (item.sku) {
+                bySku.set(item.sku, item);
+              }
+            }
+
+            const created: ErpImportRow[] = [];
+            const updated: Array<{ row: ErpImportRow; current: any; changes: Array<{ field: string; before: any; after: any }> }> = [];
+            let unchanged = 0;
+
+            function sameNumber(a: unknown, b: unknown) {
+              if (a == null && b == null) return true;
+              const na = Number(a);
+              const nb = Number(b);
+              return Number.isFinite(na) && Number.isFinite(nb) && Math.abs(na - nb) < 0.001;
+            }
+
+            for (const row of rows) {
+              const current = bySku.get(row.sku);
+              if (!current) {
+                created.push(row);
+                continue;
+              }
+
+              const changes = [
+                { field: "nombre", before: current.nombre, after: row.nombre, same: String(current.nombre ?? "") === row.nombre },
+                { field: "codigo_fabricante", before: current.codigo_fabricante, after: row.codigo_fabricante, same: String(current.codigo_fabricante ?? "") === String(row.codigo_fabricante ?? "") },
+                { field: "precio_vta_sin_iva", before: current.precio_vta_sin_iva, after: row.precio_vta_sin_iva, same: sameNumber(current.precio_vta_sin_iva, row.precio_vta_sin_iva) },
+                { field: "precio", before: current.precio, after: row.precio, same: sameNumber(current.precio, row.precio) },
+              ];
+
+              if (row.categoria !== undefined) {
+                changes.push({ field: "categoria", before: current.categoria, after: row.categoria, same: String(current.categoria ?? "") === String(row.categoria ?? "") });
+              }
+              if (row.grupo !== undefined) {
+                changes.push({ field: "grupo", before: current.grupo, after: row.grupo, same: String(current.grupo ?? "") === String(row.grupo ?? "") });
+              }
+              if (row.stock !== undefined && row.stock !== null) {
+                changes.push({ field: "stock", before: current.stock, after: row.stock, same: Number(current.stock ?? 0) === Number(row.stock ?? 0) });
+              }
+              if (row.descripcion !== undefined) {
+                changes.push({ field: "descripcion", before: current.descripcion, after: row.descripcion, same: String(current.descripcion ?? "") === String(row.descripcion ?? "") });
+              }
+              if (row.activo !== undefined && row.activo !== null) {
+                changes.push({ field: "activo", before: current.activo, after: row.activo, same: Boolean(current.activo) === Boolean(row.activo) });
+              }
+              if (row.precio_oferta !== undefined) {
+                changes.push({ field: "precio_oferta", before: current.precio_oferta, after: row.precio_oferta, same: sameNumber(current.precio_oferta, row.precio_oferta) });
+              }
+              if (row.oferta_hasta !== undefined) {
+                changes.push({ field: "oferta_hasta", before: current.oferta_hasta, after: row.oferta_hasta, same: String(current.oferta_hasta ?? "") === String(row.oferta_hasta ?? "") });
+              }
+
+              const filteredChanges = changes.filter((change) => !change.same).map(({ same, ...change }) => change);
+
+              if (filteredChanges.length) {
+                updated.push({ row, current, changes: filteredChanges });
+              } else {
+                unchanged++;
+              }
+            }
+
+            created.sort((a, b) => compareProductName(a.nombre, b.nombre));
+            updated.sort((a, b) => compareProductName(a.row.nombre, b.row.nombre));
+
+            return { created, updated, unchanged };
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -449,7 +593,7 @@ function chunkRows<T>(rows: T[], size: number) {
   return chunks;
 }
 
-const IMPORT_CHUNK_SIZE = 100;
+const IMPORT_CHUNK_SIZE = 500;
 const IMPORT_PREVIEW_PAGE_SIZE = 50;
 
 type ImportPreview = {
@@ -461,7 +605,7 @@ type ImportPreview = {
 function ErpImportModal({ onClose, onImport, onPreview }: {
   onClose: () => void;
   onImport: (rows: ErpImportRow[]) => Promise<void>;
-  onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>;
+  onPreview: (rows: ErpImportRow[], onStatus: (status: string) => void) => Promise<ImportPreview>;
 }) {
   const [rows, setRows] = useState<ErpImportRow[]>([]);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -483,8 +627,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
       setUpdatedPage(1);
       if (!parsed.length) toast.error("No encontré filas válidas en el Excel.");
       else {
-        setStatus(`Analizando ${parsed.length} productos...`);
-        setPreview(await previewRows(parsed, onPreview, setStatus));
+        setPreview(await onPreview(parsed, setStatus));
       }
     } catch (e: any) {
       toast.error(formatError(e));
@@ -495,11 +638,21 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   }
 
   async function apply() {
-    if (!rows.length) return;
+    if (!rows.length || !preview) return;
     setBusy(true);
     try {
-      setStatus(`Importando ${rows.length} productos...`);
-      await onImport(rows);
+      const changedSkus = new Set([
+        ...preview.created.map((r) => r.sku),
+        ...preview.updated.map((u) => u.row.sku),
+      ]);
+      const filteredRows = rows.filter((r) => changedSkus.has(r.sku));
+      if (!filteredRows.length) {
+        toast.info("No hay cambios para importar");
+        setBusy(false);
+        return;
+      }
+      setStatus(`Importando ${filteredRows.length} productos (${preview.created.length} nuevos, ${preview.updated.length} modificados)...`);
+      await onImport(filteredRows);
     } catch (e: any) {
       toast.error(formatError(e));
     } finally {
@@ -547,7 +700,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
         )}
 
         <div className="flex items-center justify-between gap-3 mt-5">
-          <span className="text-xs text-muted-foreground">{status || (rows.length ? `${rows.length} filas listas para importar` : "Esperando archivo")}</span>
+          <span className="text-xs text-muted-foreground">{status || (preview ? `${preview.created.length + preview.updated.length} productos para importar (${preview.unchanged} sin cambios se omiten)` : rows.length ? `${rows.length} filas leídas` : "Esperando archivo")}</span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm">Cancelar</button>
             <button disabled={busy || rows.length === 0} onClick={apply} className="bg-primary text-primary-foreground px-5 py-2 text-sm font-medium disabled:opacity-50">
@@ -560,21 +713,7 @@ function ErpImportModal({ onClose, onImport, onPreview }: {
   );
 }
 
-async function previewRows(rows: ErpImportRow[], onPreview: (rows: ErpImportRow[]) => Promise<ImportPreview>, onStatus: (status: string) => void) {
-  const summary: ImportPreview = { created: [], updated: [], unchanged: 0 };
-  const chunks = chunkRows(rows, IMPORT_CHUNK_SIZE);
-  for (let i = 0; i < chunks.length; i++) {
-    onStatus(`Analizando lote ${i + 1} de ${chunks.length}`);
-    const chunk = chunks[i];
-    const partial = await onPreview(chunk);
-    summary.created.push(...partial.created);
-    summary.updated.push(...partial.updated);
-    summary.unchanged += partial.unchanged;
-  }
-  summary.created.sort((a, b) => compareProductName(a.nombre, b.nombre));
-  summary.updated.sort((a, b) => compareProductName(a.row.nombre, b.row.nombre));
-  return summary;
-}
+
 
 function compareProductName(a: string, b: string) {
   return a.localeCompare(b, "es", { sensitivity: "base", numeric: true });
@@ -591,6 +730,14 @@ function formatError(error: any) {
 
 function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
   if (!rows.length) return <div className="border border-border p-6 text-sm text-muted-foreground">No hay productos nuevos en este archivo.</div>;
+
+  const hasCategoria = rows.some((r) => r.categoria !== undefined);
+  const hasGrupo = rows.some((r) => r.grupo !== undefined);
+  const hasStock = rows.some((r) => r.stock !== undefined && r.stock !== null);
+  const hasDescripcion = rows.some((r) => r.descripcion !== undefined);
+  const hasActivo = rows.some((r) => r.activo !== undefined && r.activo !== null);
+  const hasOferta = rows.some((r) => r.precio_oferta !== undefined);
+
   return (
     <div className="border border-border max-h-72 overflow-auto">
       <table className="w-full text-xs text-foreground">
@@ -601,6 +748,12 @@ function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
             <th className="text-left px-3 py-2">Cód. fabricante</th>
             <th className="text-right px-3 py-2">Sin IVA</th>
             <th className="text-right px-3 py-2">Venta</th>
+            {hasCategoria && <th className="text-left px-3 py-2">Categoría</th>}
+            {hasGrupo && <th className="text-left px-3 py-2">Grupo</th>}
+            {hasStock && <th className="text-right px-3 py-2">Stock</th>}
+            {hasActivo && <th className="text-center px-3 py-2">Estado</th>}
+            {hasOferta && <th className="text-right px-3 py-2">Oferta</th>}
+            {hasDescripcion && <th className="text-left px-3 py-2">Descripción</th>}
           </tr>
         </thead>
         <tbody>
@@ -611,6 +764,12 @@ function CreatedRowsTable({ rows }: { rows: ErpImportRow[] }) {
               <td className="px-3 py-2 text-muted-foreground">{row.codigo_fabricante ?? "-"}</td>
               <td className="px-3 py-2 text-right">{row.precio_vta_sin_iva != null ? formatARS(row.precio_vta_sin_iva) : "-"}</td>
               <td className="px-3 py-2 text-right">{formatARS(row.precio)}</td>
+              {hasCategoria && <td className="px-3 py-2">{row.categoria ?? "-"}</td>}
+              {hasGrupo && <td className="px-3 py-2">{row.grupo ?? "-"}</td>}
+              {hasStock && <td className="px-3 py-2 text-right">{row.stock ?? "-"}</td>}
+              {hasActivo && <td className="px-3 py-2 text-center">{row.activo == null ? "-" : row.activo ? "Activo" : "Inactivo"}</td>}
+              {hasOferta && <td className="px-3 py-2 text-right">{row.precio_oferta != null ? formatARS(row.precio_oferta) : "-"}</td>}
+              {hasDescripcion && <td className="px-3 py-2 max-w-[200px] truncate">{row.descripcion ?? "-"}</td>}
             </tr>
           ))}
         </tbody>
@@ -691,13 +850,22 @@ function fieldLabel(field: string) {
     codigo_fabricante: "Cód. fabricante",
     precio_vta_sin_iva: "Precio sin IVA",
     precio: "Precio venta",
+    categoria: "Categoría",
+    grupo: "Grupo",
+    stock: "Stock",
+    descripcion: "Descripción",
+    activo: "Estado",
+    precio_oferta: "Precio oferta",
+    oferta_hasta: "Oferta hasta",
   };
   return labels[field] ?? field;
 }
 
 function formatImportValue(field: string, value: unknown) {
   if (value == null || value === "") return "-";
-  if (field === "precio" || field === "precio_vta_sin_iva") return formatARS(Number(value));
+  if (field === "precio" || field === "precio_vta_sin_iva" || field === "precio_oferta") return formatARS(Number(value));
+  if (field === "activo") return value ? "Activo" : "Inactivo";
+  if (field === "stock") return String(Number(value));
   return String(value);
 }
 
