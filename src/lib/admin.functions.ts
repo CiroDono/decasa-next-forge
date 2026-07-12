@@ -591,14 +591,25 @@ export const adminListGrupos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase, context.userId);
-    const { data, error } = await context.supabase
-      .from("productos")
-      .select("grupo")
-      .not("grupo", "is", null)
-      .order("grupo")
-      .limit(10000);
-    if (error) throw new Error(error.message);
-    return [...new Set(data?.map(p => p.grupo).filter(Boolean))].sort();
+    const allGrupos: string[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await context.supabase
+        .from("productos")
+        .select("grupo")
+        .not("grupo", "is", null)
+        .not("grupo", "eq", "")
+        .order("grupo")
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      allGrupos.push(...(data ?? []).map((p: any) => p.grupo));
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    return [...new Set(allGrupos.filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
   });
 
 export const adminListUsuarios = createServerFn({ method: "GET" })
