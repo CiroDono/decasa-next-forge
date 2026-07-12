@@ -203,7 +203,7 @@ function Catalog() {
           </div>
 
           <div>
-            <h3 className="font-display text-sm mb-3 uppercase tracking-wider text-muted-foreground">Marca</h3>
+            <h3 className="font-display text-sm mb-3 uppercase tracking-wider text-muted-foreground">Grupos</h3>
             <ul className="space-y-1 text-sm max-h-64 overflow-y-auto pr-1">
               <li>
                 <button
