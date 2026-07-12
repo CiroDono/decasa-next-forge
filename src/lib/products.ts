@@ -222,13 +222,25 @@ export async function fetchCategorias(): Promise<string[]> {
 }
 
 export async function fetchGrupos(): Promise<string[]> {
-  const { data, error } = await supabase.from("productos").select("grupo");
-  if (error) throw error;
-  const set = new Set<string>();
-  (data ?? []).forEach((r: { grupo: string | null }) => {
-    if (r.grupo) set.add(r.grupo);
-  });
-  return Array.from(set).sort();
+  const allGrupos: string[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from("productos")
+      .select("grupo")
+      .not("grupo", "is", null)
+      .not("grupo", "eq", "")
+      .order("grupo")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    allGrupos.push(...(data ?? []).map((p: any) => p.grupo));
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return [...new Set(allGrupos.filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "es", { sensitivity: "base" })
+  );
 }
 
 export async function fetchPriceRange(): Promise<{ min: number; max: number }> {
