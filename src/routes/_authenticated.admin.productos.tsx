@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Search, X, Tag, Layers, Power, Percent, Package, BadgePercent, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import {
@@ -1115,7 +1115,19 @@ function Field({ label, value, onChange, required, type, className }: { label: s
 function SearchSelect({ placeholder, options, value, onChange }: { placeholder: string; options: string[]; value: string; onChange: (v: string) => void }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click — same reliable pattern as HeaderSearch
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
 
   const filtered = options.filter((o) =>
     o.toLowerCase().includes(search.toLowerCase())
@@ -1127,49 +1139,60 @@ function SearchSelect({ placeholder, options, value, onChange }: { placeholder: 
     setOpen(false);
   };
 
-  const displayValue = value ? `✓ ${value}` : "";
-
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative" ref={wrapRef}>
       <div className="relative">
         <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
           type="text"
-          placeholder={displayValue || placeholder}
+          placeholder={value ? `✓ ${value}` : placeholder}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setOpen(true);
+          }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
           className="w-full pl-9 pr-8 py-2 border border-border bg-background text-sm outline-none focus:border-primary"
         />
-        <ChevronDown className={`size-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${open ? "rotate-180" : ""}`} />
+        {value ? (
+          <button
+            type="button"
+            onClick={() => { onChange(""); setSearch(""); setOpen(false); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground"
+            aria-label="Limpiar filtro"
+          >
+            <X className="size-3.5" />
+          </button>
+        ) : (
+          <ChevronDown className={`size-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${open ? "rotate-180" : ""}`} />
+        )}
       </div>
       {open && options && options.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 border border-border bg-background shadow-lg max-h-48 overflow-y-auto z-10">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 border border-border bg-popover shadow-lg max-h-48 overflow-y-auto">
+          {!search && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onChange(""); setSearch(""); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${!value ? "bg-primary/10 text-primary font-medium" : ""}`}
+            >
+              {!value && <span className="mr-2">✓</span>}
+              Todas
+            </button>
+          )}
           {filtered.length > 0 ? (
-            <>
-              {!search && (
-                <button
-                  type="button"
-                  onClick={() => { onChange(""); setSearch(""); setOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${!value ? "bg-primary/10 text-primary font-medium" : ""}`}
-                >
-                  {!value && <span className="mr-2">✓</span>}
-                  Todas
-                </button>
-              )}
-              {filtered.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => handleSelect(option)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${value === option ? "bg-primary/10 text-primary font-medium" : ""}`}
-                >
-                  {value === option && <span className="mr-2">✓</span>}
-                  {option}
-                </button>
-              ))}
-            </>
+            filtered.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleSelect(option)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${value === option ? "bg-primary/10 text-primary font-medium" : ""}`}
+              >
+                {value === option && <span className="mr-2">✓</span>}
+                {option}
+              </button>
+            ))
           ) : (
             <div className="px-3 py-2 text-xs text-muted-foreground">No encontradas</div>
           )}
