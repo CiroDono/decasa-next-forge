@@ -27,9 +27,9 @@ type CatalogProduct = {
   stock: number | null;
 };
 
-const BASE_URL = "https://decasan.lovable.app";
+const BASE_URL = (process.env.PUBLIC_BASE_URL || process.env.VITE_PUBLIC_BASE_URL || "https://decasan.com.ar").replace(/\/+$/, "");
 const WHATSAPP_URL = "https://wa.me/5493548403666";
-const ALLOWED_LINK_HOSTS = new Set(["decasan.lovable.app", "wa.me", "www.instagram.com", "web.facebook.com"]);
+const ALLOWED_LINK_HOSTS = new Set(["decasan.com.ar", "decasan.lovable.app", "wa.me", "www.instagram.com", "web.facebook.com"]);
 
 const SYSTEM_PROMPT = `Sos "Decabot", el asistente virtual de Decasan Herramientas, una ferreteria de La Falda, Cordoba con mas de 60 anos de trayectoria. Atendes a clientes con tono amable, cercano y profesional, en espanol rioplatense (usa "vos").
 
@@ -64,19 +64,30 @@ export const chatWithBot = createServerFn({ method: "POST" })
     const lastUserMessage = [...data.messages].reverse().find((m) => m.role === "user")?.content ?? "";
     const catalogContext = await buildCatalogContext(lastUserMessage);
 
-    const apiKey = process.env.LOVABLE_API_KEY;
+    let apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.LOVABLE_API_KEY;
     if (!apiKey) {
       return { reply: buildFallbackReply(catalogContext) };
     }
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    let url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    let model = "google/gemini-3-flash-preview";
+
+    if (process.env.OPENAI_API_KEY) {
+      url = "https://api.openai.com/v1/chat/completions";
+      model = "gpt-4o-mini";
+    } else if (process.env.GEMINI_API_KEY) {
+      url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+      model = "gemini-1.5-flash";
+    }
+
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "system", content: catalogContext.prompt },

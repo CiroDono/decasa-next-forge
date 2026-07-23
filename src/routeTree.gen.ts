@@ -9,43 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as FaqRouteImport } from './routes/faq'
-import { Route as CheckoutRouteImport } from './routes/checkout'
-import { Route as CarritoRouteImport } from './routes/carrito'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as CarritoRouteImport } from './routes/carrito'
+import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
+import { Route as AuthenticatedCuentaRouteImport } from './routes/_authenticated.cuenta'
 import { Route as ProductosIndexRouteImport } from './routes/productos.index'
 import { Route as ProductosIdRouteImport } from './routes/productos.$id'
-import { Route as AuthenticatedCuentaRouteImport } from './routes/_authenticated.cuenta'
-import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
-import { Route as ApiPublicMercadopagoRouteImport } from './routes/api/public/mercadopago'
-import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
-import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
-import { Route as AuthenticatedAdminProductosRouteImport } from './routes/_authenticated.admin.productos'
-import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
 import { Route as AuthenticatedAdminEnviosRouteImport } from './routes/_authenticated.admin.envios'
+import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
+import { Route as AuthenticatedAdminProductosRouteImport } from './routes/_authenticated.admin.productos'
+import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
+import { Route as ApiPublicBootstrapAdminRouteImport } from './routes/api/public/bootstrap-admin'
+import { Route as ApiPublicMercadopagoRouteImport } from './routes/api/public/mercadopago'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FaqRoute = FaqRouteImport.update({
-  id: '/faq',
-  path: '/faq',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutRoute = CheckoutRouteImport.update({
-  id: '/checkout',
-  path: '/checkout',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CarritoRoute = CarritoRouteImport.update({
@@ -53,14 +42,35 @@ const CarritoRoute = CarritoRouteImport.update({
   path: '/carrito',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCuentaRoute = AuthenticatedCuentaRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const ProductosIndexRoute = ProductosIndexRouteImport.update({
   id: '/productos/',
@@ -72,41 +82,15 @@ const ProductosIdRoute = ProductosIdRouteImport.update({
   path: '/productos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedCuentaRoute = AuthenticatedCuentaRouteImport.update({
-  id: '/cuenta',
-  path: '/cuenta',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const ApiPublicMercadopagoRoute = ApiPublicMercadopagoRouteImport.update({
-  id: '/api/public/mercadopago',
-  path: '/api/public/mercadopago',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicBootstrapAdminRoute = ApiPublicBootstrapAdminRouteImport.update({
-  id: '/api/public/bootstrap-admin',
-  path: '/api/public/bootstrap-admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedAdminUsuariosRoute =
-  AuthenticatedAdminUsuariosRouteImport.update({
-    id: '/usuarios',
-    path: '/usuarios',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
-const AuthenticatedAdminProductosRoute =
-  AuthenticatedAdminProductosRouteImport.update({
-    id: '/productos',
-    path: '/productos',
+const AuthenticatedAdminEnviosRoute =
+  AuthenticatedAdminEnviosRouteImport.update({
+    id: '/envios',
+    path: '/envios',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminPedidosRoute =
@@ -115,12 +99,28 @@ const AuthenticatedAdminPedidosRoute =
     path: '/pedidos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
-const AuthenticatedAdminEnviosRoute =
-  AuthenticatedAdminEnviosRouteImport.update({
-    id: '/envios',
-    path: '/envios',
+const AuthenticatedAdminProductosRoute =
+  AuthenticatedAdminProductosRouteImport.update({
+    id: '/productos',
+    path: '/productos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminUsuariosRoute =
+  AuthenticatedAdminUsuariosRouteImport.update({
+    id: '/usuarios',
+    path: '/usuarios',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const ApiPublicBootstrapAdminRoute = ApiPublicBootstrapAdminRouteImport.update({
+  id: '/api/public/bootstrap-admin',
+  path: '/api/public/bootstrap-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMercadopagoRoute = ApiPublicMercadopagoRouteImport.update({
+  id: '/api/public/mercadopago',
+  path: '/api/public/mercadopago',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -133,10 +133,10 @@ export interface FileRoutesByFullPath {
   '/cuenta': typeof AuthenticatedCuentaRoute
   '/productos/$id': typeof ProductosIdRoute
   '/productos/': typeof ProductosIndexRoute
+  '/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
-  '/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
   '/api/public/mercadopago': typeof ApiPublicMercadopagoRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -151,10 +151,10 @@ export interface FileRoutesByTo {
   '/cuenta': typeof AuthenticatedCuentaRoute
   '/productos/$id': typeof ProductosIdRoute
   '/productos': typeof ProductosIndexRoute
+  '/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
-  '/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
   '/api/public/mercadopago': typeof ApiPublicMercadopagoRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -172,10 +172,10 @@ export interface FileRoutesById {
   '/_authenticated/cuenta': typeof AuthenticatedCuentaRoute
   '/productos/$id': typeof ProductosIdRoute
   '/productos/': typeof ProductosIndexRoute
+  '/_authenticated/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
-  '/_authenticated/admin/envios': typeof AuthenticatedAdminEnviosRoute
   '/api/public/bootstrap-admin': typeof ApiPublicBootstrapAdminRoute
   '/api/public/mercadopago': typeof ApiPublicMercadopagoRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -193,10 +193,10 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/productos/$id'
     | '/productos/'
+    | '/admin/envios'
     | '/admin/pedidos'
     | '/admin/productos'
     | '/admin/usuarios'
-    | '/admin/envios'
     | '/api/public/bootstrap-admin'
     | '/api/public/mercadopago'
     | '/admin/'
@@ -211,10 +211,10 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/productos/$id'
     | '/productos'
+    | '/admin/envios'
     | '/admin/pedidos'
     | '/admin/productos'
     | '/admin/usuarios'
-    | '/admin/envios'
     | '/api/public/bootstrap-admin'
     | '/api/public/mercadopago'
     | '/admin'
@@ -231,10 +231,10 @@ export interface FileRouteTypes {
     | '/_authenticated/cuenta'
     | '/productos/$id'
     | '/productos/'
+    | '/_authenticated/admin/envios'
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/productos'
     | '/_authenticated/admin/usuarios'
-    | '/_authenticated/admin/envios'
     | '/api/public/bootstrap-admin'
     | '/api/public/mercadopago'
     | '/_authenticated/admin/'
@@ -256,39 +256,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/faq': {
-      id: '/faq'
-      path: '/faq'
-      fullPath: '/faq'
-      preLoaderRoute: typeof FaqRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout': {
-      id: '/checkout'
-      path: '/checkout'
-      fullPath: '/checkout'
-      preLoaderRoute: typeof CheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/carrito': {
-      id: '/carrito'
-      path: '/carrito'
-      fullPath: '/carrito'
-      preLoaderRoute: typeof CarritoRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -298,12 +270,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/carrito': {
+      id: '/carrito'
+      path: '/carrito'
+      fullPath: '/carrito'
+      preLoaderRoute: typeof CarritoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/cuenta': {
+      id: '/_authenticated/cuenta'
+      path: '/cuenta'
+      fullPath: '/cuenta'
+      preLoaderRoute: typeof AuthenticatedCuentaRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/productos/': {
       id: '/productos/'
@@ -319,20 +333,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/cuenta': {
-      id: '/_authenticated/cuenta'
-      path: '/cuenta'
-      fullPath: '/cuenta'
-      preLoaderRoute: typeof AuthenticatedCuentaRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -340,32 +340,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/api/public/mercadopago': {
-      id: '/api/public/mercadopago'
-      path: '/api/public/mercadopago'
-      fullPath: '/api/public/mercadopago'
-      preLoaderRoute: typeof ApiPublicMercadopagoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/bootstrap-admin': {
-      id: '/api/public/bootstrap-admin'
-      path: '/api/public/bootstrap-admin'
-      fullPath: '/api/public/bootstrap-admin'
-      preLoaderRoute: typeof ApiPublicBootstrapAdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/admin/usuarios': {
-      id: '/_authenticated/admin/usuarios'
-      path: '/usuarios'
-      fullPath: '/admin/usuarios'
-      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
-    '/_authenticated/admin/productos': {
-      id: '/_authenticated/admin/productos'
-      path: '/productos'
-      fullPath: '/admin/productos'
-      preLoaderRoute: typeof AuthenticatedAdminProductosRouteImport
+    '/_authenticated/admin/envios': {
+      id: '/_authenticated/admin/envios'
+      path: '/envios'
+      fullPath: '/admin/envios'
+      preLoaderRoute: typeof AuthenticatedAdminEnviosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/pedidos': {
@@ -375,12 +354,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/envios': {
-      id: '/_authenticated/admin/envios'
-      path: '/envios'
-      fullPath: '/admin/envios'
-      preLoaderRoute: typeof AuthenticatedAdminEnviosRouteImport
+    '/_authenticated/admin/productos': {
+      id: '/_authenticated/admin/productos'
+      path: '/productos'
+      fullPath: '/admin/productos'
+      preLoaderRoute: typeof AuthenticatedAdminProductosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/usuarios': {
+      id: '/_authenticated/admin/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/api/public/bootstrap-admin': {
+      id: '/api/public/bootstrap-admin'
+      path: '/api/public/bootstrap-admin'
+      fullPath: '/api/public/bootstrap-admin'
+      preLoaderRoute: typeof ApiPublicBootstrapAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mercadopago': {
+      id: '/api/public/mercadopago'
+      path: '/api/public/mercadopago'
+      fullPath: '/api/public/mercadopago'
+      preLoaderRoute: typeof ApiPublicMercadopagoRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
